@@ -1,0 +1,919 @@
+Question 1 — Where does the stock data come from?
+
+
+
+USE THE SAME ITEMLIST.CSV FILE AS THE SOURCE. BUT THE LIST ON THE SCREEN SHOULD BE A SEPERATE LIST TAKEN FROM THE SAME SOURCE.
+
+Option A: Merchandiser manually marks items as Low Stock / Out of Stock during their visit (separate from expiry entry)
+
+
+
+
+
+Question 2 — Is this a separate data entry, or part of expiry entry?
+
+Option A: Separate screen/section where merchandiser types or selects
+          product names that are low stock or out of stock
+
+Question 3 — Does "Out of Stock" mean quantity = 0?
+
+YES IF THE QTY ON THE SHELF IS 0 MERCHANDISER WILL TURN ON THE OOS LED LIKE RED LIGHT
+IF THE ITEM ON THE SHELF IS LOW STOCK MERCHANSISER WILL ENTER THE QTY IN NUMBERS.
+
+SO ONLY BARCODE AND DESCRIPTIONS IS REQUIRED AS THE LIST ON THE SCREEN. TRY TO SHOW THE LIST STARTING FROM THE TOP OF THE SCREEN TILL LAST AND AVOID ANY UNNCESSARY BUTTONS OR HEADERS OR FOOTERS SO THAT THE LIST CAN OCCUPY AS SCREEN SPACE AS POSSIBLE FOR QUICK READABILITY FOR THE USER.
+
+APART FROM THE BARCODE AND DESCRIPTIO THERE SHOUD OOS BUTTON AT THE LEST SIDE OF EACH ROW AND QTY FIELD AT THE RIGHT SIDE OF EACH ROW. ITEM DESCRIPTION WORD WRAP TO THE NEXT LINE IF THE DESCRIPTION LONGER. 
+COLOUMN TITLES
+OOS - BARCODE - DESCRIPTION - QTY
+
+ABOVE THE COLUMN TITLE FIXEED NUMBERS FROM 0 TO 9 FROM EXTREM LEFT TO THE EXTREME RIGHT TO ALLOW MAXIMUM POSSIBLE GAP BETWEEMN NUMBERS ALSO THE PC QTY AND CTN BUTTON AND ALSO THE SHARE BUTTON JUST BELOW THE NUMER ROW IN THE SAME PANEL
+
+SO THE FINAL REPORT SHOULD BE AS FOLLOWS
+
+FORMAT
+
+OULET NAME
+LOW STOCK
+
+DESCRIPTION 1 - 5 PC
+DESCRIPTION 2 - 2 OUT
+DESCRIPTION 3 - 1 CTN
+ETC
+
+OUT OF STOCK
+DESCRIPTION 1
+DESCRIPTION 2
+DESCRIPTION 3
+ETC
+
+AT ANY TIME THE MERCHANSIDSER CLICK SHARE BUTTON THE WHATSAPP READY TEXT REPORTSHOULD BE AVAILBLE ON THE SCREEN AND THE MERCHANDISER WILL SHAE IT USNG THE POST BUTTON
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Proceed to Phase 13
+
+Let me read all the relevant existing files before writing any code.
+
+  Searched for 6 patterns, read 10 files
+Referenced file app\src\main\java\com\armada\expiryapp\ui\screens\entry\NewEntryScreen.kt
+Referenced file app\src\main\java\com\armada\expiryapp\ui\screens\entry\NewEntryViewModel.kt
+Read app\src\main\java\com\armada\expiryapp\data\repository\ExpiryEntryRepository.kt (102 lines)
+Read app\src\main\java\com\armada\expiryapp\data\db\dao\ExpiryEntryDao.kt (176 lines)
+Read app\src\main\java\com\armada\expiryapp\ui\screens\entry\CalendarDatePicker.kt (270 lines)
+
+Good. Now let me check the remaining files I need before writing.
+
+  Read 6 files
+
+Now I have everything. Let me implement Phase 13 in full — 8 files to write/modify. Starting with the data layer, then utilities, then UI.
+
+Step 1: Add Apache POI to build.gradle.kts + packaging exclusions
+
+● Update(app\build.gradle.kts)
+Added 13 lines
+        compose = true
+        buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += "META-INF/DEPENDENCIES"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/AL2.0"
+            excludes += "META-INF/LGPL2.1"
+            excludes += "META-INF/*.kotlin_module"
+        }
+    }
+}
+
+dependencies {
+
+● Update(app\build.gradle.kts)
+Added 8 lines
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
+
+    // ── Phase 13: Excel export ────────────────────────────────────────────────
+    implementation(libs.apache.poi.ooxml) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+        exclude(group = "com.fasterxml.jackson.core")
+        exclude(group = "com.fasterxml.jackson.module")
+    }
+    implementation("org.slf4j:slf4j-android:1.7.36")
+
+    // ── Phase 8: Camera + ML Kit barcode ────────────────────────────────────
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+
+Step 2: Create res/xml/file_paths.xml
+
+  Ran 1 shell command
+
+● Write(app\src\main\res\xml\file_paths.xml)
+Wrote 5 lines to app\src\main\res\xml\file_paths.xml
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="documents" path="Documents/" />
+    <external-files-path name="backups"   path="Backups/" />
+</paths>
+
+Step 3: Add FileProvider to AndroidManifest.xml
+
+● Update(app\src\main\AndroidManifest.xml)
+Added 4 lines
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Storage write only needed below API 29 for external files dir -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <!-- Camera is strongly recommended but not required (app works without scanning) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+● Update(app\src\main\AndroidManifest.xml)
+Added 10 lines
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>
+
+Step 4: Add getAllEntriesForMerchandiserMonth to DAO and Repository
+
+● Update(app\src\main\java\com\armada\expiryapp\data\db\dao\ExpiryEntryDao.kt)
+Added 16 lines
+        monthPrefix: String
+    ): List<ExpiryEntry>
+
+    // ── All-outlets text report ───────────────────────────────────────────────
+
+    @Query("""
+        SELECT * FROM expiry_entries
+        WHERE merchandiser = :merchandiser
+          AND salesman     = :salesman
+          AND archived = 0
+          AND entryTimestamp LIKE :monthPrefix || '%'
+        ORDER BY outletName ASC, expiryDate ASC
+    """)
+    suspend fun getAllEntriesForMerchandiserMonth(
+        merchandiser: String,
+        salesman: String,
+        monthPrefix: String,
+    ): List<ExpiryEntry>
+
+    // ── Session recovery ──────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM expiry_entries WHERE archived = 0 ORDER BY entryTimestamp DESC LIMIT 1")
+
+● Update(app\src\main\java\com\armada\expiryapp\data\repository\ExpiryEntryRepository.kt)
+Added 6 lines
+        monthPrefix: String
+    ): List<ExpiryEntry> = dao.getEntriesForExport(outletCode, merchandiser, salesman, monthPrefix)
+
+    suspend fun getAllEntriesForMerchandiserMonth(
+        merchandiser: String,
+        salesman: String,
+        monthPrefix: String,
+    ): List<ExpiryEntry> = dao.getAllEntriesForMerchandiserMonth(merchandiser, salesman, monthPrefix)
+
+    // ── Session recovery ──────────────────────────────────────────────────────
+
+    suspend fun getLastActiveEntry(): ExpiryEntry? = dao.getLastActiveEntry()
+
+Step 5: Create util/ExcelExporter.kt
+
+● Write(app\src\main\java\com\armada\expiryapp\util\ExcelExporter.kt)
+Wrote 89 lines to app\src\main\java\com\armada\expiryapp\util\ExcelExporter.kt
+package com.armada.expiryapp.util
+
+import android.content.Context
+import android.os.Environment
+import com.armada.expiryapp.data.db.entity.ExpiryEntry
+import com.armada.expiryapp.data.db.entity.Outlet
+import org.apache.poi.xssf.usermodel.XSSFSheet
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.io.File
+import java.time.LocalDate
+… +79 lines
+
+Step 6: Create util/AutoBackup.kt
+
+● Write(app\src\main\java\com\armada\expiryapp\util\AutoBackup.kt)
+Wrote 27 lines to app\src\main\java\com\armada\expiryapp\util\AutoBackup.kt
+ackage com.armada.expiryapp.util
+
+mport android.content.Context
+mport java.io.File
+mport java.text.SimpleDateFormat
+mport java.util.Date
+mport java.util.Locale
+
+lass AutoBackup(private val context: Context) {
+… +17 lines
+
+Step 7: Create ReportsViewModel.kt
+
+● Write(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsViewModel.kt)
+Wrote 297 lines to app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsViewModel.kt
+package com.armada.expiryapp.ui.screens.reports
+
+import android.content.Context
+import android.os.Environment
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+… +287 lines
+
+Step 8: Write the full ReportsScreen.kt
+
+● Write(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsScreen.kt)
+Added 519 lines, removed 9 lines
+@file:OptIn(ExperimentalMaterial3Api::class)
+
+package com.armada.expiryapp.ui.screens.reports
+
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.armada.expiryapp.data.db.entity.ExpiryEntry
+import com.armada.expiryapp.ui.theme.ArmadaColors
+import com.armada.expiryapp.util.toDisplayDate
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+@Composable
+fun ReportsScreen() {
+    Box(
+fun ReportsScreen(
+    viewModel: ReportsViewModel = hiltViewModel(),
+) {
+    val context           = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val selectedOutlet   by viewModel.selectedOutlet.collectAsState()
+    val outletQuery      by viewModel.outletQuery.collectAsState()
+    val outletResults    by viewModel.outletResults.collectAsState()
+    val summaryData      by viewModel.summaryData.collectAsState()
+    val isExportingExcel by viewModel.isExportingExcel.collectAsState()
+    val showTextDialog   by viewModel.showTextScopeDialog.collectAsState()
+    val pastExports      by viewModel.pastExports.collectAsState()
+    val reportEntries    = viewModel.reportEntries.collectAsLazyPagingItems()
+
+    // Observe one-shot share events
+    LaunchedEffect(Unit) {
+        viewModel.snackMessage.collect { msg ->
+            snackbarHostState.showSnackbar(msg)
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.shareFile.collect { file ->
+            try {
+                val uri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file,
+                )
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, "Share Excel Report"))
+            } catch (_: ActivityNotFoundException) {
+                snackbarHostState.showSnackbar("No app found to share this file.")
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar("Share failed: ${e.localizedMessage ?: "error"}")
+            }
+        }
+    }
+    LaunchedEffect(Unit) {
+        viewModel.shareText.collect { text ->
+            try {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_TEXT, text)
+                }
+                context.startActivity(Intent.createChooser(intent, "Share Text Report"))
+            } catch (_: ActivityNotFoundException) {
+                snackbarHostState.showSnackbar("No app found to share text.")
+            }
+        }
+    }
+
+    // Text report scope dialog
+    if (showTextDialog) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissTextScopeDialog,
+            title = { Text("Share Text Report", color = ArmadaColors.BrandTitle) },
+            text  = { Text("Share entries for this outlet only, or all outlets visited this month?") },
+            confirmButton = {
+                TextButton(onClick = viewModel::shareTextAllOutlets) {
+                    Text("All Outlets")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::shareTextThisOutlet) {
+                    Text("This Outlet Only")
+                }
+            },
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(ArmadaColors.BgApp)) {
+
+        LazyColumn(
+            modifier          = Modifier.fillMaxSize(),
+            contentPadding    = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+
+            // ── Outlet selector ───────────────────────────────────────────────
+            item {
+                OutletSelector(
+                    query          = outletQuery,
+                    results        = outletResults,
+                    hasSelection   = selectedOutlet != null,
+                    onQueryChange  = viewModel::setOutletQuery,
+                    onSelect       = viewModel::selectOutlet,
+                    onClear        = viewModel::clearOutletSelection,
+                )
+            }
+
+            // ── Summary card ──────────────────────────────────────────────────
+            summaryData?.let { s ->
+                item {
+                    SummaryCard(s)
+                }
+
+                // ── Share buttons ─────────────────────────────────────────────
+                item {
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Button(
+                            onClick  = viewModel::exportExcel,
+                            enabled  = !isExportingExcel,
+                            modifier = Modifier.weight(1f),
+                            colors   = ButtonDefaults.buttonColors(
+                                containerColor = ArmadaColors.BrandAccent,
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            if (isExportingExcel) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color    = Color.White,
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Building…", color = Color.White)
+                            } else {
+                                Icon(
+                                    Icons.Filled.Description,
+                                    contentDescription = null,
+                                    tint     = Color.White,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text("Share Excel", color = Color.White)
+                            }
+                        }
+
+                        Button(
+                            onClick  = viewModel::requestTextReport,
+                            modifier = Modifier.weight(1f),
+                            colors   = ButtonDefaults.buttonColors(
+                                containerColor = ArmadaColors.BtnOcr,
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Message,
+                                contentDescription = null,
+                                tint     = Color.White,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Share Text", color = Color.White)
+                        }
+                    }
+                }
+
+                // ── Report table ──────────────────────────────────────────────
+                item {
+                    ReportTableHeader()
+                }
+            }
+
+            // ── Report rows ───────────────────────────────────────────────────
+            if (selectedOutlet != null) {
+                items(
+                    count = reportEntries.itemCount,
+                    key   = { index -> reportEntries[index]?.id ?: index.toLong() },
+                ) { index ->
+                    val entry = reportEntries[index]
+                    if (entry != null) {
+                        ReportTableRow(entry = entry, index = index)
+                    }
+                }
+
+                if (reportEntries.itemCount == 0) {
+                    item {
+                        Text(
+                            text     = "No active entries for this outlet.",
+                            color    = ArmadaColors.TextSecondary,
+                            modifier = Modifier.padding(vertical = 16.dp),
+                        )
+                    }
+                }
+            }
+
+            // ── Past exports ──────────────────────────────────────────────────
+            if (pastExports.isNotEmpty()) {
+                item { Spacer(Modifier.height(4.dp)) }
+                item {
+                    Text(
+                        "Past Exports",
+                        fontWeight = FontWeight.SemiBold,
+                        color      = ArmadaColors.BrandTitle,
+                        fontSize   = 14.sp,
+                    )
+                }
+                items(pastExports.size) { i ->
+                    PastExportRow(
+                        file    = pastExports[i],
+                        context = context,
+                        onShareError = { msg -> /* snackbar via LaunchedEffect */
+                            viewModel.viewModelScope.run { /* no-op; error shown inline */ }
+                        },
+                    )
+                }
+                item { Spacer(Modifier.height(16.dp)) }
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier  = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+// ── Outlet selector ───────────────────────────────────────────────────────────
+
+@Composable
+private fun OutletSelector(
+    query:         String,
+    results:       List<com.armada.expiryapp.data.db.entity.Outlet>,
+    hasSelection:  Boolean,
+    onQueryChange: (String) -> Unit,
+    onSelect:      (com.armada.expiryapp.data.db.entity.Outlet) -> Unit,
+    onClear:       () -> Unit,
+) {
+    Column {
+        OutlinedTextField(
+            value           = query,
+            onValueChange   = { if (!hasSelection) onQueryChange(it) },
+            label           = { Text("Search outlet") },
+            placeholder     = { Text("Type outlet name…") },
+            singleLine      = true,
+            readOnly        = hasSelection,
+            modifier        = Modifier.fillMaxWidth(),
+            trailingIcon    = {
+                if (hasSelection) {
+                    IconButton(onClick = onClear) {
+                        Icon(Icons.Filled.Close, contentDescription = "Clear selection")
+                    }
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor   = ArmadaColors.BrandAccent,
+                unfocusedBorderColor = ArmadaColors.Border,
+                focusedLabelColor    = ArmadaColors.BrandAccent,
+            ),
+        )
+
+        if (results.isNotEmpty() && !hasSelection) {
+            Card(
+                modifier  = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors    = CardDefaults.cardColors(containerColor = ArmadaColors.BgCard),
+                shape     = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
+            ) {
+                Column {
+                    results.take(5).forEach { outlet ->
+                        Text(
+                            text     = outlet.outletName,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelect(outlet) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            color    = ArmadaColors.TextPrimary,
+                        )
+                        HorizontalDivider(color = ArmadaColors.Border, thickness = 0.5.dp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Summary card ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun SummaryCard(s: ReportsViewModel.SummaryData) {
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors    = CardDefaults.cardColors(containerColor = ArmadaColors.BgCard),
+        shape     = RoundedCornerShape(12.dp),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text       = s.outletName,
+                fontWeight = FontWeight.Bold,
+                color      = ArmadaColors.BrandTitle,
+                fontSize   = 16.sp,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text  = "${s.merchandiser}  ·  ${s.salesman}",
+                color = ArmadaColors.TextSecondary,
+                fontSize = 12.sp,
+            )
+            Text(
+                text  = s.monthLabel,
+                color = ArmadaColors.TextSecondary,
+                fontSize = 12.sp,
+            )
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(color = ArmadaColors.Border, thickness = 0.5.dp)
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                SummaryStatItem(label = "Total Items", value = s.itemCount.toString(),
+                    color = ArmadaColors.BrandAccent)
+                SummaryStatItem(label = "Expired", value = s.expiredCount.toString(),
+                    color = ArmadaColors.StatusExpired)
+                SummaryStatItem(label = "≤30 Days", value = s.within30Count.toString(),
+                    color = ArmadaColors.StatusD30)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryStatItem(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, fontWeight = FontWeight.Bold, color = color, fontSize = 20.sp)
+        Text(label, color = ArmadaColors.TextSecondary, fontSize = 11.sp)
+    }
+}
+
+// ── Report table ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun ReportTableHeader() {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ArmadaColors.BgApp),
+        contentAlignment = Alignment.Center,
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+            .background(ArmadaColors.TableHeader)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    ) {
+        Text("CODE",        Modifier.weight(0.9f), color = Color.White,
+            fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+        Text("DESCRIPTION", Modifier.weight(2f),   color = Color.White,
+            fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+        Text("EXPIRY",      Modifier.weight(1.1f), color = Color.White,
+            fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+        Text("QTY",         Modifier.weight(0.7f), color = Color.White,
+            fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun ReportTableRow(entry: ExpiryEntry, index: Int) {
+    val bg = if (index % 2 == 0) ArmadaColors.BgCard else ArmadaColors.BgApp
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text  = "Reports — Phase 13",
+            style = MaterialTheme.typography.titleLarge,
+            color = ArmadaColors.BrandTitle,
+            text     = entry.productCode ?: "—",
+            modifier = Modifier.weight(0.9f),
+            color    = ArmadaColors.TextSecondary,
+            fontSize = 11.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text     = entry.description,
+            modifier = Modifier.weight(2f),
+            color    = ArmadaColors.TextPrimary,
+            fontSize = 11.sp,
+        )
+        Text(
+            text     = entry.expiryDate.toDisplayDate(),
+            modifier = Modifier.weight(1.1f),
+            color    = ArmadaColors.TextPrimary,
+            fontSize = 11.sp,
+        )
+        Text(
+            text     = "${entry.quantity} ${entry.unit}",
+            modifier = Modifier.weight(0.7f),
+            color    = ArmadaColors.TextPrimary,
+            fontSize = 11.sp,
+        )
+    }
+}
+
+// ── Past export row ───────────────────────────────────────────────────────────
+
+@Composable
+private fun PastExportRow(
+    file:       File,
+    context:    android.content.Context,
+    onShareError: (String) -> Unit,
+) {
+    val dateLabel = remember(file) {
+        SimpleDateFormat("d MMM yyyy, h:mm a", Locale.getDefault()).format(Date(file.lastModified()))
+    }
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        colors    = CardDefaults.cardColors(containerColor = ArmadaColors.BgCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape     = RoundedCornerShape(8.dp),
+    ) {
+        Row(
+            modifier          = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Filled.Description,
+                contentDescription = null,
+                tint     = ArmadaColors.BrandAccent,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text     = file.name,
+                    color    = ArmadaColors.TextPrimary,
+                    fontSize = 12.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text     = dateLabel,
+                    color    = ArmadaColors.TextSecondary,
+                    fontSize = 10.sp,
+                )
+            }
+            IconButton(
+                onClick = {
+                    try {
+                        val uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file,
+                        )
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Share Report"))
+                    } catch (_: Exception) {
+                        onShareError("Could not share file.")
+                    }
+                },
+            ) {
+                Icon(
+                    Icons.Filled.IosShare,
+                    contentDescription = "Share",
+                    tint = ArmadaColors.BrandAccent,
+                )
+            }
+        }
+    }
+}
+
+Step 9: Update AppNavGraph.kt to wire ReportsScreen with its ViewModel
+
+● Update(app\src\main\java\com\armada\expiryapp\ui\navigation\AppNavGraph.kt)
+Added 4 lines, removed 1 line
+            )
+        }
+
+        composable(Screen.Reports.route)   { ReportsScreen() }
+        composable(Screen.Reports.route) {
+            val viewModel: com.armada.expiryapp.ui.screens.reports.ReportsViewModel = hiltViewModel()
+            ReportsScreen(viewModel = viewModel)
+        }
+        composable(Screen.History.route)   { HistoryScreen() }
+    }
+}
+
+There are two issues to fix in ReportsScreen.kt — the onShareError callback incorrectly accesses viewModelScope, and PastExportRow signature needs a proper context type. Let me fix both:
+
+● Update(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsViewModel.kt)
+Added 2 lines
+
+    // ── Past exports ──────────────────────────────────────────────────────────
+
+    fun emitSnack(msg: String) { _snackMessage.tryEmit(msg) }
+
+    fun loadPastExports() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val docsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+
+Now fix the screen — replace the bad onShareError usage and fix the PastExportRow context type:
+
+● Update(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsScreen.kt)
+Added 3 lines, removed 5 lines
+                }
+                items(pastExports.size) { i ->
+                    PastExportRow(
+                        file    = pastExports[i],
+                        context = context,
+                        onShareError = { msg -> /* snackbar via LaunchedEffect */
+                            viewModel.viewModelScope.run { /* no-op; error shown inline */ }
+                        },
+                        file         = pastExports[i],
+                        context      = context,
+                        onShareError = viewModel::emitSnack,
+                    )
+                }
+                item { Spacer(Modifier.height(16.dp)) }
+
+Now fix the PastExportRow context import to use the proper type:
+
+● Update(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsScreen.kt)
+Added 2 lines, removed 2 lines
+
+@Composable
+private fun PastExportRow(
+    file:       File,
+    context:    android.content.Context,
+    file:         File,
+    context:      android.content.Context,
+    onShareError: (String) -> Unit,
+) {
+    val dateLabel = remember(file) {
+
+Now let me clean up unused imports in ReportsScreen before building:
+
+● Update(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsScreen.kt)
+Removed 1 line
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+
+● Update(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsScreen.kt)
+Removed 2 lines
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+
+Now build:
+
+  Ran 1 shell command
+
+Two issues to fix:
+
+1. POI 5.2.5 uses MethodHandle.invoke requiring API 26 — bump minSdk to 26 (Android 8+, >97% device coverage in 2025)
+2. Hilt can't resolve SessionHolder — wrong package import; need to find the correct one
+
+  Searched for 1 pattern
+
+● Update(app\src\main\java\com\armada\expiryapp\ui\screens\reports\ReportsViewModel.kt)
+Added 1 line, removed 1 line
+import com.armada.expiryapp.data.db.entity.Outlet
+import com.armada.expiryapp.data.repository.ExpiryEntryRepository
+import com.armada.expiryapp.data.repository.OutletRepository
+import com.armada.expiryapp.session.SessionHolder
+import com.armada.expiryapp.data.session.SessionHolder
+import com.armada.expiryapp.util.AutoBackup
+import com.armada.expiryapp.util.ExcelExporter
+import com.armada.expiryapp.util.toDisplayDate
+You've hit your session limit · resets 3:20pm (Asia/Dubai)
+/upgrade to increase your usage limit.
+

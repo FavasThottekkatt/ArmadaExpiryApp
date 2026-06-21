@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Window theme applied before Compose takes over.
+        NoActionBar: Compose supplies its own top bar.
+        windowBackground: matches bg.app to prevent flash on cold start.
+    -->
+    <style name="Theme.ArmadaExpiryApp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg_app</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

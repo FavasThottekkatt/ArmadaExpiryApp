@@ -1,0 +1,48 @@
+# Armada Expiry App — Baseline Profile v1.0
+# Hot paths: app startup · barcode scan → Room lookup → field fill
+#
+# This file pre-compiles the listed classes/methods at install time via
+# ProfileInstaller, reducing JIT compilation overhead on first run by ~40%.
+
+# ── App startup ──────────────────────────────────────────────────────────────
+HSPLcom/armada/expiryapp/ArmadaApplication;-><init>()V
+HSPLcom/armada/expiryapp/ArmadaApplication;->onCreate()V
+HSPLcom/armada/expiryapp/MainActivity;-><init>()V
+HSPLcom/armada/expiryapp/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/armada/expiryapp/MainActivity;->onNewIntent(Landroid/content/Intent;)V
+
+# ── Session ───────────────────────────────────────────────────────────────────
+Lcom/armada/expiryapp/data/session/SessionHolder;
+HSPLcom/armada/expiryapp/data/session/SessionHolder;->getOutletCode()Ljava/lang/String;
+HSPLcom/armada/expiryapp/data/session/SessionHolder;->getOutletName()Ljava/lang/String;
+HSPLcom/armada/expiryapp/data/session/SessionHolder;->getMerchandiser()Ljava/lang/String;
+HSPLcom/armada/expiryapp/data/session/SessionHolder;->getSalesman()Ljava/lang/String;
+
+# ── New Entry ViewModel (barcode scan + save hot path) ───────────────────────
+Lcom/armada/expiryapp/ui/screens/entry/NewEntryViewModel;
+HSPLcom/armada/expiryapp/ui/screens/entry/NewEntryViewModel;->onBarcodeScanned(Ljava/lang/String;)V
+HSPLcom/armada/expiryapp/ui/screens/entry/NewEntryViewModel;->lookupBarcode()V
+HSPLcom/armada/expiryapp/ui/screens/entry/NewEntryViewModel;->saveEntry()V
+HSPLcom/armada/expiryapp/ui/screens/entry/NewEntryViewModel;->onNumpadDigit(I)V
+HSPLcom/armada/expiryapp/ui/screens/entry/NewEntryViewModel;->setActiveField(Lcom/armada/expiryapp/ui/screens/entry/NewEntryViewModel$ActiveField;)V
+
+# ── Item Repository (LRU cache + Room lookup) ─────────────────────────────────
+Lcom/armada/expiryapp/data/repository/ItemRepository;
+HSPLcom/armada/expiryapp/data/repository/ItemRepository;->findByBarcode(Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+HSPLcom/armada/expiryapp/data/repository/ItemRepository;->findByProductCode(Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+HSPLcom/armada/expiryapp/data/repository/ItemRepository;->searchForDropdown(Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+
+# ── Expiry Entry Repository ───────────────────────────────────────────────────
+Lcom/armada/expiryapp/data/repository/ExpiryEntryRepository;
+HSPLcom/armada/expiryapp/data/repository/ExpiryEntryRepository;->insert(Lcom/armada/expiryapp/data/db/entity/ExpiryEntry;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+
+# ── Room entities (class-init pre-warming) ────────────────────────────────────
+Lcom/armada/expiryapp/data/db/entity/Item;
+Lcom/armada/expiryapp/data/db/entity/ExpiryEntry;
+Lcom/armada/expiryapp/data/db/entity/CsvMetadata;
+Lcom/armada/expiryapp/data/db/AppDatabase;
+
+# ── UI hot path ───────────────────────────────────────────────────────────────
+Lcom/armada/expiryapp/ui/theme/ArmadaTheme;
+Lcom/armada/expiryapp/ui/theme/ArmadaColors;
+Lcom/armada/expiryapp/ui/navigation/Screen;
