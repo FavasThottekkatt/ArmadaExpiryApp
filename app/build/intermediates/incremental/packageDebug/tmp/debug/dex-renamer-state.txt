@@ -1,4 +1,4 @@
-#Sun Jun 21 08:32:56 GST 2026
+#Sun Jun 21 10:04:23 GST 2026
 base.0=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
 base.10=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\7\\classes.dex
@@ -10,6 +10,7 @@ base.15=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\m
 base.16=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes4.dex
 base.17=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes5.dex
 base.18=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes6.dex
+base.19=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\13\\classes.dex
 base.2=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\10\\classes.dex
 base.3=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\11\\classes.dex
 base.4=C\:\\Projects\\ArmadaExpiryApp\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\14\\classes.dex
@@ -29,6 +30,7 @@ path.15=classes3.dex
 path.16=classes4.dex
 path.17=classes5.dex
 path.18=classes6.dex
+path.19=13/classes.dex
 path.2=10/classes.dex
 path.3=11/classes.dex
 path.4=14/classes.dex
@@ -48,6 +50,7 @@ renamed.15=classes16.dex
 renamed.16=classes17.dex
 renamed.17=classes18.dex
 renamed.18=classes19.dex
+renamed.19=classes20.dex
 renamed.2=classes3.dex
 renamed.3=classes4.dex
 renamed.4=classes5.dex

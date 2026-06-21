@@ -6,6 +6,7 @@ import com.armada.expiryapp.ui.screens.csvimport.CsvImportViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.dashboard.DashboardViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.entry.NewEntryViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.history.HistoryViewModel_HiltModules;
+import com.armada.expiryapp.ui.screens.itemlinking.ItemLinkingViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.login.LoginViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.reports.ReportsViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.settings.SettingsViewModel_HiltModules;
@@ -172,6 +173,7 @@ public final class ArmadaApplication_HiltComponents {
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           HiltWrapper_SavedStateHandleModule.class,
           HistoryViewModel_HiltModules.KeyModule.class,
+          ItemLinkingViewModel_HiltModules.KeyModule.class,
           LoginViewModel_HiltModules.KeyModule.class,
           NewEntryViewModel_HiltModules.KeyModule.class,
           ReportsViewModel_HiltModules.KeyModule.class,
@@ -217,6 +219,7 @@ public final class ArmadaApplication_HiltComponents {
           DashboardViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
           HistoryViewModel_HiltModules.BindsModule.class,
+          ItemLinkingViewModel_HiltModules.BindsModule.class,
           LoginViewModel_HiltModules.BindsModule.class,
           NewEntryViewModel_HiltModules.BindsModule.class,
           ReportsViewModel_HiltModules.BindsModule.class,
