@@ -1,8 +1,9 @@
 package com.armada.expiryapp.ui.screens.history;
 
 import android.content.Context;
+import com.armada.expiryapp.data.repository.DeviceLockRepository;
 import com.armada.expiryapp.data.repository.ExpiryEntryRepository;
-import com.armada.expiryapp.data.repository.OutletRepository;
+import com.armada.expiryapp.data.repository.TeamLinkRepository;
 import com.armada.expiryapp.data.session.SessionHolder;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -32,32 +33,38 @@ public final class HistoryViewModel_Factory implements Factory<HistoryViewModel>
 
   private final Provider<ExpiryEntryRepository> entryRepositoryProvider;
 
-  private final Provider<OutletRepository> outletRepositoryProvider;
+  private final Provider<DeviceLockRepository> deviceLockRepositoryProvider;
+
+  private final Provider<TeamLinkRepository> teamLinkRepositoryProvider;
 
   public HistoryViewModel_Factory(Provider<Context> contextProvider,
       Provider<SessionHolder> sessionHolderProvider,
       Provider<ExpiryEntryRepository> entryRepositoryProvider,
-      Provider<OutletRepository> outletRepositoryProvider) {
+      Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider) {
     this.contextProvider = contextProvider;
     this.sessionHolderProvider = sessionHolderProvider;
     this.entryRepositoryProvider = entryRepositoryProvider;
-    this.outletRepositoryProvider = outletRepositoryProvider;
+    this.deviceLockRepositoryProvider = deviceLockRepositoryProvider;
+    this.teamLinkRepositoryProvider = teamLinkRepositoryProvider;
   }
 
   @Override
   public HistoryViewModel get() {
-    return newInstance(contextProvider.get(), sessionHolderProvider.get(), entryRepositoryProvider.get(), outletRepositoryProvider.get());
+    return newInstance(contextProvider.get(), sessionHolderProvider.get(), entryRepositoryProvider.get(), deviceLockRepositoryProvider.get(), teamLinkRepositoryProvider.get());
   }
 
   public static HistoryViewModel_Factory create(Provider<Context> contextProvider,
       Provider<SessionHolder> sessionHolderProvider,
       Provider<ExpiryEntryRepository> entryRepositoryProvider,
-      Provider<OutletRepository> outletRepositoryProvider) {
-    return new HistoryViewModel_Factory(contextProvider, sessionHolderProvider, entryRepositoryProvider, outletRepositoryProvider);
+      Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider) {
+    return new HistoryViewModel_Factory(contextProvider, sessionHolderProvider, entryRepositoryProvider, deviceLockRepositoryProvider, teamLinkRepositoryProvider);
   }
 
   public static HistoryViewModel newInstance(Context context, SessionHolder sessionHolder,
-      ExpiryEntryRepository entryRepository, OutletRepository outletRepository) {
-    return new HistoryViewModel(context, sessionHolder, entryRepository, outletRepository);
+      ExpiryEntryRepository entryRepository, DeviceLockRepository deviceLockRepository,
+      TeamLinkRepository teamLinkRepository) {
+    return new HistoryViewModel(context, sessionHolder, entryRepository, deviceLockRepository, teamLinkRepository);
   }
 }

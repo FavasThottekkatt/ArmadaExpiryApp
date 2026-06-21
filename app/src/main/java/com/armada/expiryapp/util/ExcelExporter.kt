@@ -5,6 +5,7 @@ import android.os.Environment
 import android.util.Log
 import com.armada.expiryapp.data.db.entity.ExpiryEntry
 import com.armada.expiryapp.data.db.entity.Outlet
+import org.apache.poi.xssf.usermodel.XSSFRow
 import org.apache.poi.xssf.usermodel.XSSFSheet
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
@@ -102,5 +103,77 @@ class ExcelExporter(private val context: Context) {
         }
 
         return file
+    }
+
+    @Throws(Exception::class, OutOfMemoryError::class)
+    fun buildMultiOutletFile(
+        outletEntries: List<Pair<Outlet, List<ExpiryEntry>>>,
+        merchandiser:  String,
+    ): File {
+        val monthYear = LocalDate.now()
+            .format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault()))
+        val sanitize = { s: String -> s.replace(Regex("[\\\\/:*?\"<>|]"), "").trim() }
+        val fileName = "${sanitize(merchandiser)} – $monthYear – Expiry Report.xlsx"
+        val docsDir  = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+            ?: throw IllegalStateException("External Documents folder unavailable")
+        docsDir.mkdirs()
+        val file = File(docsDir, fileName)
+
+        var workbook: XSSFWorkbook? = null
+        try {
+            workbook = if (file.exists()) {
+                runCatching { file.inputStream().use { XSSFWorkbook(it) } }.getOrElse { XSSFWorkbook() }
+            } else {
+                XSSFWorkbook()
+            }
+
+            outletEntries.forEach { (outlet, entries) ->
+                val sheetName = outlet.shortName.ifBlank { outlet.outletName }.take(31)
+
+                val existingIdx = workbook.getSheetIndex(sheetName)
+                if (existingIdx >= 0) workbook.removeSheetAt(existingIdx)
+                val sheet: XSSFSheet = workbook.createSheet(sheetName)
+
+                val salesman = entries.firstOrNull()?.salesman ?: ""
+
+                writeCell(sheet.createRow(0), 0, "SALESMAN :")    ; writeCell(sheet.getRow(0), 1, salesman)
+                writeCell(sheet.createRow(1), 0, "MERCHANDISER :"); writeCell(sheet.getRow(1), 1, merchandiser)
+                writeCell(sheet.createRow(2), 0, "OUTLET NAME :") ; writeCell(sheet.getRow(2), 1, outlet.outletName)
+                writeCell(sheet.createRow(3), 0, "CODE :")         ; writeCell(sheet.getRow(3), 1, outlet.outletCode)
+                sheet.createRow(4)
+                sheet.createRow(5).also { row ->
+                    writeCell(row, 0, "CODE")
+                    writeCell(row, 1, "DESCRIPTION")
+                    writeCell(row, 2, "EXPIRY DATE")
+                    writeCell(row, 3, "QTY")
+                }
+
+                entries.sortedBy { it.expiryDate }.forEachIndexed { i, e ->
+                    sheet.createRow(6 + i).also { row ->
+                        writeCell(row, 0, e.productCode ?: "")
+                        writeCell(row, 1, e.description)
+                        writeCell(row, 2, runCatching {
+                            LocalDate.parse(e.expiryDate).format(excelDateFmt)
+                        }.getOrDefault(e.expiryDate))
+                        writeCell(row, 3, "${e.quantity} ${e.unit}")
+                    }
+                }
+
+                sheet.setColumnWidth(0, 3840)
+                sheet.setColumnWidth(1, 11520)
+                sheet.setColumnWidth(2, 3584)
+                sheet.setColumnWidth(3, 3072)
+            }
+
+            file.outputStream().use { workbook.write(it) }
+            Log.i(TAG, "Multi-outlet Excel saved: ${file.name}")
+            return file
+        } finally {
+            workbook?.close()
+        }
+    }
+
+    private fun writeCell(row: XSSFRow, col: Int, value: String) {
+        row.createCell(col).setCellValue(value)
     }
 }

@@ -1,8 +1,9 @@
 package com.armada.expiryapp.ui.screens.reports;
 
 import android.content.Context;
+import com.armada.expiryapp.data.repository.DeviceLockRepository;
 import com.armada.expiryapp.data.repository.ExpiryEntryRepository;
-import com.armada.expiryapp.data.repository.OutletRepository;
+import com.armada.expiryapp.data.repository.TeamLinkRepository;
 import com.armada.expiryapp.data.session.SessionHolder;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -32,32 +33,38 @@ public final class ReportsViewModel_Factory implements Factory<ReportsViewModel>
 
   private final Provider<ExpiryEntryRepository> entryRepositoryProvider;
 
-  private final Provider<OutletRepository> outletRepositoryProvider;
+  private final Provider<DeviceLockRepository> deviceLockRepositoryProvider;
+
+  private final Provider<TeamLinkRepository> teamLinkRepositoryProvider;
 
   public ReportsViewModel_Factory(Provider<Context> contextProvider,
       Provider<SessionHolder> sessionHolderProvider,
       Provider<ExpiryEntryRepository> entryRepositoryProvider,
-      Provider<OutletRepository> outletRepositoryProvider) {
+      Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider) {
     this.contextProvider = contextProvider;
     this.sessionHolderProvider = sessionHolderProvider;
     this.entryRepositoryProvider = entryRepositoryProvider;
-    this.outletRepositoryProvider = outletRepositoryProvider;
+    this.deviceLockRepositoryProvider = deviceLockRepositoryProvider;
+    this.teamLinkRepositoryProvider = teamLinkRepositoryProvider;
   }
 
   @Override
   public ReportsViewModel get() {
-    return newInstance(contextProvider.get(), sessionHolderProvider.get(), entryRepositoryProvider.get(), outletRepositoryProvider.get());
+    return newInstance(contextProvider.get(), sessionHolderProvider.get(), entryRepositoryProvider.get(), deviceLockRepositoryProvider.get(), teamLinkRepositoryProvider.get());
   }
 
   public static ReportsViewModel_Factory create(Provider<Context> contextProvider,
       Provider<SessionHolder> sessionHolderProvider,
       Provider<ExpiryEntryRepository> entryRepositoryProvider,
-      Provider<OutletRepository> outletRepositoryProvider) {
-    return new ReportsViewModel_Factory(contextProvider, sessionHolderProvider, entryRepositoryProvider, outletRepositoryProvider);
+      Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider) {
+    return new ReportsViewModel_Factory(contextProvider, sessionHolderProvider, entryRepositoryProvider, deviceLockRepositoryProvider, teamLinkRepositoryProvider);
   }
 
   public static ReportsViewModel newInstance(Context context, SessionHolder sessionHolder,
-      ExpiryEntryRepository entryRepository, OutletRepository outletRepository) {
-    return new ReportsViewModel(context, sessionHolder, entryRepository, outletRepository);
+      ExpiryEntryRepository entryRepository, DeviceLockRepository deviceLockRepository,
+      TeamLinkRepository teamLinkRepository) {
+    return new ReportsViewModel(context, sessionHolder, entryRepository, deviceLockRepository, teamLinkRepository);
   }
 }

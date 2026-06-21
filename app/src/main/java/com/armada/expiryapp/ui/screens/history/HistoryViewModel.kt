@@ -9,17 +9,17 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.armada.expiryapp.data.db.entity.ExpiryEntry
 import com.armada.expiryapp.data.db.entity.Outlet
+import com.armada.expiryapp.data.db.entity.TeamLink
+import com.armada.expiryapp.data.repository.DeviceLockRepository
 import com.armada.expiryapp.data.repository.ExpiryEntryRepository
-import com.armada.expiryapp.data.repository.OutletRepository
+import com.armada.expiryapp.data.repository.TeamLinkRepository
 import com.armada.expiryapp.data.session.SessionHolder
-import com.armada.expiryapp.util.AutoBackup
 import com.armada.expiryapp.util.ExcelExporter
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -43,13 +42,18 @@ import javax.inject.Inject
 class HistoryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     val sessionHolder: SessionHolder,
-    private val entryRepository: ExpiryEntryRepository,
-    private val outletRepository: OutletRepository,
+    private val entryRepository:      ExpiryEntryRepository,
+    private val deviceLockRepository: DeviceLockRepository,
+    private val teamLinkRepository:   TeamLinkRepository,
 ) : ViewModel() {
 
     private val handler = CoroutineExceptionHandler { _, t ->
         _snackMessage.tryEmit("Error: ${t.localizedMessage ?: "Unknown"}")
     }
+
+    // ── Linked outlets (loaded once from TeamLink for this device) ────────────
+
+    private val _linkedOutlets = MutableStateFlow<List<TeamLink>>(emptyList())
 
     // ── Outlet selection ──────────────────────────────────────────────────────
 
@@ -62,15 +66,7 @@ class HistoryViewModel @Inject constructor(
     private val _outletResults = MutableStateFlow<List<Outlet>>(emptyList())
     val outletResults: StateFlow<List<Outlet>> = _outletResults.asStateFlow()
 
-    // ── Dialog ────────────────────────────────────────────────────────────────
-
-    private val _showArchiveDialog = MutableStateFlow(false)
-    val showArchiveDialog: StateFlow<Boolean> = _showArchiveDialog.asStateFlow()
-
     // ── Loading flags ─────────────────────────────────────────────────────────
-
-    private val _isArchiving = MutableStateFlow(false)
-    val isArchiving: StateFlow<Boolean> = _isArchiving.asStateFlow()
 
     private val _isExporting = MutableStateFlow(false)
     val isExporting: StateFlow<Boolean> = _isExporting.asStateFlow()
@@ -108,14 +104,21 @@ class HistoryViewModel @Inject constructor(
     // ── Init ──────────────────────────────────────────────────────────────────
 
     init {
-        startOutletSearch()
-        val code = sessionHolder.outletCode
-        if (code.isNotBlank()) {
-            viewModelScope.launch(Dispatchers.IO + handler) {
-                val outlet = outletRepository.findByCode(code)
-                if (outlet != null) {
-                    _selectedOutlet.value = outlet
-                    _outletQuery.value = outlet.outletName
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val lock = deviceLockRepository.get()
+            if (lock != null) {
+                val links = teamLinkRepository.getAllForMerchandiser(lock.merchandiserName)
+                _linkedOutlets.value = links
+                // Auto-select from active session if outlet is in linked list
+                val sessionCode = sessionHolder.outletCode
+                if (sessionCode.isNotBlank()) {
+                    val link = links.find { it.outletCode == sessionCode }
+                    if (link != null) {
+                        val outlet = Outlet(outletCode = link.outletCode,
+                                            outletName = link.outletName, shortName = "")
+                        _selectedOutlet.value = outlet
+                        _outletQuery.value    = outlet.outletName
+                    }
                 }
             }
         }
@@ -123,59 +126,31 @@ class HistoryViewModel @Inject constructor(
 
     // ── Outlet selection ──────────────────────────────────────────────────────
 
-    fun setOutletQuery(q: String) { _outletQuery.value = q }
+    fun setOutletQuery(query: String) {
+        _outletQuery.value = query
+        if (_selectedOutlet.value != null) return
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val links = _linkedOutlets.value
+            _outletResults.value = if (query.isBlank()) {
+                links.map { Outlet(outletCode = it.outletCode, outletName = it.outletName, shortName = "") }
+            } else {
+                links
+                    .filter { it.outletName.contains(query, ignoreCase = true) }
+                    .map { Outlet(outletCode = it.outletCode, outletName = it.outletName, shortName = "") }
+            }
+        }
+    }
 
     fun selectOutlet(outlet: Outlet) {
         _selectedOutlet.value = outlet
-        _outletQuery.value = outlet.outletName
-        _outletResults.value = emptyList()
+        _outletQuery.value    = outlet.outletName
+        _outletResults.value  = emptyList()
     }
 
     fun clearOutletSelection() {
         _selectedOutlet.value = null
-        _outletQuery.value = ""
-        _outletResults.value = emptyList()
-    }
-
-    @OptIn(FlowPreview::class)
-    private fun startOutletSearch() {
-        viewModelScope.launch(Dispatchers.IO + handler) {
-            _outletQuery.debounce(150L).collect { query ->
-                _outletResults.value =
-                    if (query.isNotBlank() && _selectedOutlet.value == null)
-                        outletRepository.searchForDropdown(query)
-                    else emptyList()
-            }
-        }
-    }
-
-    // ── Archive This Month ────────────────────────────────────────────────────
-
-    fun requestArchive() {
-        if (_selectedOutlet.value == null) {
-            _snackMessage.tryEmit("Please select an outlet first.")
-            return
-        }
-        _showArchiveDialog.value = true
-    }
-
-    fun dismissArchiveDialog() { _showArchiveDialog.value = false }
-
-    fun confirmArchive() {
-        _showArchiveDialog.value = false
-        val outlet = _selectedOutlet.value ?: return
-        _isArchiving.value = true
-        viewModelScope.launch(Dispatchers.IO + handler) {
-            try {
-                val monthPrefix = LocalDate.now()
-                    .format(DateTimeFormatter.ofPattern("yyyy-MM"))
-                entryRepository.archiveForOutletMonth(outlet.outletCode, monthPrefix)
-                AutoBackup(context).backup()
-                _snackMessage.tryEmit("Archived ${outlet.outletName} entries for this month.")
-            } finally {
-                _isArchiving.value = false
-            }
-        }
+        _outletQuery.value    = ""
+        _outletResults.value  = emptyList()
     }
 
     // ── Export History ────────────────────────────────────────────────────────

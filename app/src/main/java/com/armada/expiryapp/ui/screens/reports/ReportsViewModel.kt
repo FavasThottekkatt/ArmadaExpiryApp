@@ -10,8 +10,10 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.armada.expiryapp.data.db.entity.ExpiryEntry
 import com.armada.expiryapp.data.db.entity.Outlet
+import com.armada.expiryapp.data.db.entity.TeamLink
+import com.armada.expiryapp.data.repository.DeviceLockRepository
 import com.armada.expiryapp.data.repository.ExpiryEntryRepository
-import com.armada.expiryapp.data.repository.OutletRepository
+import com.armada.expiryapp.data.repository.TeamLinkRepository
 import com.armada.expiryapp.data.session.SessionHolder
 import com.armada.expiryapp.util.AutoBackup
 import com.armada.expiryapp.util.ExcelExporter
@@ -21,7 +23,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +30,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -44,8 +44,9 @@ import javax.inject.Inject
 class ReportsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     val sessionHolder: SessionHolder,
-    private val entryRepository: ExpiryEntryRepository,
-    private val outletRepository: OutletRepository,
+    private val entryRepository:      ExpiryEntryRepository,
+    private val deviceLockRepository: DeviceLockRepository,
+    private val teamLinkRepository:   TeamLinkRepository,
 ) : ViewModel() {
 
     data class SummaryData(
@@ -61,6 +62,10 @@ class ReportsViewModel @Inject constructor(
     private val handler = CoroutineExceptionHandler { _, t ->
         _snackMessage.tryEmit("Error: ${t.localizedMessage ?: "Unknown"}")
     }
+
+    // ── Linked outlets (loaded once from TeamLink for this device) ────────────
+
+    private val _linkedOutlets = MutableStateFlow<List<TeamLink>>(emptyList())
 
     // ── Outlet selection ──────────────────────────────────────────────────────
 
@@ -117,51 +122,57 @@ class ReportsViewModel @Inject constructor(
     // ── Init ──────────────────────────────────────────────────────────────────
 
     init {
-        startOutletSearch()
-        loadPastExports()
-        // Pre-select outlet from active session if one is set
-        val code = sessionHolder.outletCode
-        if (code.isNotBlank()) {
-            viewModelScope.launch(Dispatchers.IO + handler) {
-                val outlet = outletRepository.findByCode(code)
-                if (outlet != null) {
-                    _selectedOutlet.value = outlet
-                    _outletQuery.value = outlet.outletName
-                    loadSummary(outlet)
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val lock = deviceLockRepository.get()
+            if (lock != null) {
+                val links = teamLinkRepository.getAllForMerchandiser(lock.merchandiserName)
+                _linkedOutlets.value = links
+                // Auto-select from active session if outlet is in linked list
+                val sessionCode = sessionHolder.outletCode
+                if (sessionCode.isNotBlank()) {
+                    val link = links.find { it.outletCode == sessionCode }
+                    if (link != null) {
+                        val outlet = Outlet(outletCode = link.outletCode,
+                                            outletName = link.outletName, shortName = "")
+                        _selectedOutlet.value = outlet
+                        _outletQuery.value    = outlet.outletName
+                        loadSummary(outlet)
+                    }
                 }
             }
         }
+        loadPastExports()
     }
 
     // ── Outlet selection ──────────────────────────────────────────────────────
 
-    fun setOutletQuery(q: String) {
-        _outletQuery.value = q
+    fun setOutletQuery(query: String) {
+        _outletQuery.value = query
+        if (_selectedOutlet.value != null) return
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val links = _linkedOutlets.value
+            _outletResults.value = if (query.isBlank()) {
+                links.map { Outlet(outletCode = it.outletCode, outletName = it.outletName, shortName = "") }
+            } else {
+                links
+                    .filter { it.outletName.contains(query, ignoreCase = true) }
+                    .map { Outlet(outletCode = it.outletCode, outletName = it.outletName, shortName = "") }
+            }
+        }
     }
 
     fun selectOutlet(outlet: Outlet) {
         _selectedOutlet.value = outlet
-        _outletQuery.value = outlet.outletName
-        _outletResults.value = emptyList()
+        _outletQuery.value    = outlet.outletName
+        _outletResults.value  = emptyList()
         viewModelScope.launch(Dispatchers.IO + handler) { loadSummary(outlet) }
     }
 
     fun clearOutletSelection() {
         _selectedOutlet.value = null
-        _outletQuery.value = ""
-        _outletResults.value = emptyList()
-        _summaryData.value = null
-    }
-
-    @OptIn(FlowPreview::class)
-    private fun startOutletSearch() {
-        viewModelScope.launch(Dispatchers.IO + handler) {
-            _outletQuery.debounce(150L).collect { query ->
-                _outletResults.value = if (query.length >= 1 && _selectedOutlet.value == null)
-                    outletRepository.searchForDropdown(query)
-                else emptyList()
-            }
-        }
+        _outletQuery.value    = ""
+        _outletResults.value  = emptyList()
+        _summaryData.value    = null
     }
 
     private suspend fun loadSummary(outlet: Outlet) {
@@ -186,32 +197,41 @@ class ReportsViewModel @Inject constructor(
     // ── Excel export ──────────────────────────────────────────────────────────
 
     fun exportExcel() {
-        val outlet = _selectedOutlet.value
-        if (outlet == null) { _snackMessage.tryEmit("Please select an outlet first."); return }
-        val merchandiser = sessionHolder.merchandiser
-        val salesman     = sessionHolder.salesman
-        if (merchandiser.isBlank() || salesman.isBlank()) {
-            _snackMessage.tryEmit("Session not ready. Return to Dashboard and try again.")
-            return
-        }
-
         _isExportingExcel.value = true
         viewModelScope.launch(Dispatchers.IO + handler) {
             try {
-                val monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
-                val entries = entryRepository.getEntriesForExport(
-                    outlet.outletCode, merchandiser, salesman, monthPrefix,
-                )
-                if (entries.isEmpty()) {
-                    _snackMessage.tryEmit("No entries for this outlet this month.")
+                val lock = deviceLockRepository.get() ?: run {
+                    _snackMessage.tryEmit("Merchandiser not set. Complete Team Linking first.")
+                    _isExportingExcel.value = false
                     return@launch
                 }
-                val file = ExcelExporter(context).buildAndSaveFile(
-                    entries, outlet, merchandiser, salesman,
+                val links = teamLinkRepository.getAllForMerchandiser(lock.merchandiserName)
+                if (links.isEmpty()) {
+                    _snackMessage.tryEmit("No outlets linked.")
+                    _isExportingExcel.value = false
+                    return@launch
+                }
+                val monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
+                val outletEntries = mutableListOf<Pair<Outlet, List<ExpiryEntry>>>()
+                links.forEach { link ->
+                    val entries = entryRepository.getEntriesForExport(
+                        outletCode   = link.outletCode,
+                        merchandiser = lock.merchandiserName,
+                        salesman     = link.salesmanName,
+                        monthPrefix  = monthPrefix,
+                    )
+                    outletEntries.add(
+                        Outlet(outletCode = link.outletCode, outletName = link.outletName,
+                               shortName  = link.outletName.take(31)) to entries
+                    )
+                }
+                val file = ExcelExporter(context).buildMultiOutletFile(
+                    outletEntries = outletEntries,
+                    merchandiser  = lock.merchandiserName,
                 )
-                _shareFile.tryEmit(file)
                 triggerAutoBackup()
                 loadPastExports()
+                _shareFile.tryEmit(file)
             } catch (oom: OutOfMemoryError) {
                 _snackMessage.tryEmit("Not enough memory to build Excel. Close other apps and retry.")
             } catch (e: Exception) {
@@ -249,15 +269,31 @@ class ReportsViewModel @Inject constructor(
     fun shareTextAllOutlets() {
         _showTextScopeDialog.value = false
         viewModelScope.launch(Dispatchers.IO + handler) {
+            val lock = deviceLockRepository.get() ?: run {
+                _snackMessage.tryEmit("Merchandiser not set. Complete Team Linking first.")
+                return@launch
+            }
+            val links = teamLinkRepository.getAllForMerchandiser(lock.merchandiserName)
+            if (links.isEmpty()) {
+                _snackMessage.tryEmit("No outlets linked. Complete Team Linking first.")
+                return@launch
+            }
             val monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
-            val allEntries = entryRepository.getAllEntriesForMerchandiserMonth(
-                sessionHolder.merchandiser, sessionHolder.salesman, monthPrefix,
-            )
-            val grouped = allEntries
-                .groupBy { it.outletName }
-                .entries.sortedBy { it.key }
-                .map { (name, list) -> name to list }
-            _shareText.tryEmit(buildTextReport(grouped))
+            val sections = mutableListOf<Pair<String, List<ExpiryEntry>>>()
+            links.forEach { link ->
+                val entries = entryRepository.getEntriesForExport(
+                    outletCode   = link.outletCode,
+                    merchandiser = lock.merchandiserName,
+                    salesman     = link.salesmanName,
+                    monthPrefix  = monthPrefix,
+                )
+                if (entries.isNotEmpty()) sections.add(link.outletName to entries)
+            }
+            if (sections.isEmpty()) {
+                _snackMessage.tryEmit("No entries found for any linked outlet this month.")
+                return@launch
+            }
+            _shareText.tryEmit(buildTextReport(sections))
         }
     }
 

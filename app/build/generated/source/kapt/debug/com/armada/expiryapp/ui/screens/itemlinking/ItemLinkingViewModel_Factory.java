@@ -1,8 +1,9 @@
 package com.armada.expiryapp.ui.screens.itemlinking;
 
+import com.armada.expiryapp.data.repository.DeviceLockRepository;
 import com.armada.expiryapp.data.repository.ItemRepository;
 import com.armada.expiryapp.data.repository.OutletItemLinkRepository;
-import com.armada.expiryapp.data.session.SessionHolder;
+import com.armada.expiryapp.data.repository.TeamLinkRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -25,33 +26,40 @@ import javax.inject.Provider;
     "cast"
 })
 public final class ItemLinkingViewModel_Factory implements Factory<ItemLinkingViewModel> {
-  private final Provider<SessionHolder> sessionHolderProvider;
+  private final Provider<DeviceLockRepository> deviceLockRepositoryProvider;
+
+  private final Provider<TeamLinkRepository> teamLinkRepositoryProvider;
 
   private final Provider<ItemRepository> itemRepositoryProvider;
 
   private final Provider<OutletItemLinkRepository> linkRepositoryProvider;
 
-  public ItemLinkingViewModel_Factory(Provider<SessionHolder> sessionHolderProvider,
+  public ItemLinkingViewModel_Factory(Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider,
       Provider<ItemRepository> itemRepositoryProvider,
       Provider<OutletItemLinkRepository> linkRepositoryProvider) {
-    this.sessionHolderProvider = sessionHolderProvider;
+    this.deviceLockRepositoryProvider = deviceLockRepositoryProvider;
+    this.teamLinkRepositoryProvider = teamLinkRepositoryProvider;
     this.itemRepositoryProvider = itemRepositoryProvider;
     this.linkRepositoryProvider = linkRepositoryProvider;
   }
 
   @Override
   public ItemLinkingViewModel get() {
-    return newInstance(sessionHolderProvider.get(), itemRepositoryProvider.get(), linkRepositoryProvider.get());
+    return newInstance(deviceLockRepositoryProvider.get(), teamLinkRepositoryProvider.get(), itemRepositoryProvider.get(), linkRepositoryProvider.get());
   }
 
-  public static ItemLinkingViewModel_Factory create(Provider<SessionHolder> sessionHolderProvider,
+  public static ItemLinkingViewModel_Factory create(
+      Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider,
       Provider<ItemRepository> itemRepositoryProvider,
       Provider<OutletItemLinkRepository> linkRepositoryProvider) {
-    return new ItemLinkingViewModel_Factory(sessionHolderProvider, itemRepositoryProvider, linkRepositoryProvider);
+    return new ItemLinkingViewModel_Factory(deviceLockRepositoryProvider, teamLinkRepositoryProvider, itemRepositoryProvider, linkRepositoryProvider);
   }
 
-  public static ItemLinkingViewModel newInstance(SessionHolder sessionHolder,
-      ItemRepository itemRepository, OutletItemLinkRepository linkRepository) {
-    return new ItemLinkingViewModel(sessionHolder, itemRepository, linkRepository);
+  public static ItemLinkingViewModel newInstance(DeviceLockRepository deviceLockRepository,
+      TeamLinkRepository teamLinkRepository, ItemRepository itemRepository,
+      OutletItemLinkRepository linkRepository) {
+    return new ItemLinkingViewModel(deviceLockRepository, teamLinkRepository, itemRepository, linkRepository);
   }
 }

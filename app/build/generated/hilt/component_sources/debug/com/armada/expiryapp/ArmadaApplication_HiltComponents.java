@@ -12,6 +12,7 @@ import com.armada.expiryapp.ui.screens.reports.ReportsViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.settings.SettingsViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.startup.StartupViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.stock.StockViewModel_HiltModules;
+import com.armada.expiryapp.ui.screens.teamlinking.TeamLinkingViewModel_HiltModules;
 import com.armada.expiryapp.worker.ArchiveWorker;
 import dagger.Binds;
 import dagger.Component;
@@ -179,7 +180,8 @@ public final class ArmadaApplication_HiltComponents {
           ReportsViewModel_HiltModules.KeyModule.class,
           SettingsViewModel_HiltModules.KeyModule.class,
           StartupViewModel_HiltModules.KeyModule.class,
-          StockViewModel_HiltModules.KeyModule.class
+          StockViewModel_HiltModules.KeyModule.class,
+          TeamLinkingViewModel_HiltModules.KeyModule.class
       }
   )
   @ActivityRetainedScoped
@@ -225,7 +227,8 @@ public final class ArmadaApplication_HiltComponents {
           ReportsViewModel_HiltModules.BindsModule.class,
           SettingsViewModel_HiltModules.BindsModule.class,
           StartupViewModel_HiltModules.BindsModule.class,
-          StockViewModel_HiltModules.BindsModule.class
+          StockViewModel_HiltModules.BindsModule.class,
+          TeamLinkingViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped

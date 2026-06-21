@@ -9,26 +9,32 @@ import androidx.lifecycle.ViewModel;
 import com.armada.expiryapp.data.auth.AuthRepository;
 import com.armada.expiryapp.data.db.AppDatabase;
 import com.armada.expiryapp.data.db.dao.CsvMetadataDao;
+import com.armada.expiryapp.data.db.dao.DeviceLockDao;
 import com.armada.expiryapp.data.db.dao.ExpiryEntryDao;
 import com.armada.expiryapp.data.db.dao.ItemDao;
 import com.armada.expiryapp.data.db.dao.OutletDao;
 import com.armada.expiryapp.data.db.dao.OutletItemLinkDao;
 import com.armada.expiryapp.data.db.dao.StockEntryDao;
+import com.armada.expiryapp.data.db.dao.TeamLinkDao;
 import com.armada.expiryapp.data.repository.CsvImportRepository;
 import com.armada.expiryapp.data.repository.CsvMetadataRepository;
+import com.armada.expiryapp.data.repository.DeviceLockRepository;
 import com.armada.expiryapp.data.repository.ExpiryEntryRepository;
 import com.armada.expiryapp.data.repository.ItemRepository;
 import com.armada.expiryapp.data.repository.OutletItemLinkRepository;
 import com.armada.expiryapp.data.repository.OutletRepository;
 import com.armada.expiryapp.data.repository.StockEntryRepository;
+import com.armada.expiryapp.data.repository.TeamLinkRepository;
 import com.armada.expiryapp.data.session.SessionHolder;
 import com.armada.expiryapp.di.DatabaseModule_ProvideCsvMetadataDaoFactory;
 import com.armada.expiryapp.di.DatabaseModule_ProvideDatabaseFactory;
+import com.armada.expiryapp.di.DatabaseModule_ProvideDeviceLockDaoFactory;
 import com.armada.expiryapp.di.DatabaseModule_ProvideExpiryEntryDaoFactory;
 import com.armada.expiryapp.di.DatabaseModule_ProvideItemDaoFactory;
 import com.armada.expiryapp.di.DatabaseModule_ProvideOutletDaoFactory;
 import com.armada.expiryapp.di.DatabaseModule_ProvideOutletItemLinkDaoFactory;
 import com.armada.expiryapp.di.DatabaseModule_ProvideStockEntryDaoFactory;
+import com.armada.expiryapp.di.DatabaseModule_ProvideTeamLinkDaoFactory;
 import com.armada.expiryapp.ui.screens.csvimport.CsvImportViewModel;
 import com.armada.expiryapp.ui.screens.csvimport.CsvImportViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.dashboard.DashboardViewModel;
@@ -49,6 +55,8 @@ import com.armada.expiryapp.ui.screens.startup.StartupViewModel;
 import com.armada.expiryapp.ui.screens.startup.StartupViewModel_HiltModules;
 import com.armada.expiryapp.ui.screens.stock.StockViewModel;
 import com.armada.expiryapp.ui.screens.stock.StockViewModel_HiltModules;
+import com.armada.expiryapp.ui.screens.teamlinking.TeamLinkingViewModel;
+import com.armada.expiryapp.ui.screens.teamlinking.TeamLinkingViewModel_HiltModules;
 import dagger.hilt.android.ActivityRetainedLifecycle;
 import dagger.hilt.android.ViewModelLifecycle;
 import dagger.hilt.android.internal.builders.ActivityComponentBuilder;
@@ -409,7 +417,7 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
 
     @Override
     public Map<Class<?>, Boolean> getViewModelKeys() {
-      return LazyClassKeyMap.<Boolean>of(MapBuilder.<String, Boolean>newMapBuilder(10).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel, CsvImportViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel, DashboardViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_history_HistoryViewModel, HistoryViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel, ItemLinkingViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_login_LoginViewModel, LoginViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_entry_NewEntryViewModel, NewEntryViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_reports_ReportsViewModel, ReportsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_settings_SettingsViewModel, SettingsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_startup_StartupViewModel, StartupViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_stock_StockViewModel, StockViewModel_HiltModules.KeyModule.provide()).build());
+      return LazyClassKeyMap.<Boolean>of(MapBuilder.<String, Boolean>newMapBuilder(11).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel, CsvImportViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel, DashboardViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_history_HistoryViewModel, HistoryViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel, ItemLinkingViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_login_LoginViewModel, LoginViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_entry_NewEntryViewModel, NewEntryViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_reports_ReportsViewModel, ReportsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_settings_SettingsViewModel, SettingsViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_startup_StartupViewModel, StartupViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_stock_StockViewModel, StockViewModel_HiltModules.KeyModule.provide()).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_teamlinking_TeamLinkingViewModel, TeamLinkingViewModel_HiltModules.KeyModule.provide()).build());
     }
 
     @Override
@@ -431,53 +439,58 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
     private static final class LazyClassKeyProvider {
       static String com_armada_expiryapp_ui_screens_settings_SettingsViewModel = "com.armada.expiryapp.ui.screens.settings.SettingsViewModel";
 
-      static String com_armada_expiryapp_ui_screens_entry_NewEntryViewModel = "com.armada.expiryapp.ui.screens.entry.NewEntryViewModel";
-
-      static String com_armada_expiryapp_ui_screens_reports_ReportsViewModel = "com.armada.expiryapp.ui.screens.reports.ReportsViewModel";
-
-      static String com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel = "com.armada.expiryapp.ui.screens.dashboard.DashboardViewModel";
+      static String com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel = "com.armada.expiryapp.ui.screens.itemlinking.ItemLinkingViewModel";
 
       static String com_armada_expiryapp_ui_screens_login_LoginViewModel = "com.armada.expiryapp.ui.screens.login.LoginViewModel";
 
+      static String com_armada_expiryapp_ui_screens_entry_NewEntryViewModel = "com.armada.expiryapp.ui.screens.entry.NewEntryViewModel";
+
       static String com_armada_expiryapp_ui_screens_startup_StartupViewModel = "com.armada.expiryapp.ui.screens.startup.StartupViewModel";
 
-      static String com_armada_expiryapp_ui_screens_stock_StockViewModel = "com.armada.expiryapp.ui.screens.stock.StockViewModel";
+      static String com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel = "com.armada.expiryapp.ui.screens.dashboard.DashboardViewModel";
 
-      static String com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel = "com.armada.expiryapp.ui.screens.itemlinking.ItemLinkingViewModel";
+      static String com_armada_expiryapp_ui_screens_teamlinking_TeamLinkingViewModel = "com.armada.expiryapp.ui.screens.teamlinking.TeamLinkingViewModel";
+
+      static String com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel = "com.armada.expiryapp.ui.screens.csvimport.CsvImportViewModel";
+
+      static String com_armada_expiryapp_ui_screens_reports_ReportsViewModel = "com.armada.expiryapp.ui.screens.reports.ReportsViewModel";
 
       static String com_armada_expiryapp_ui_screens_history_HistoryViewModel = "com.armada.expiryapp.ui.screens.history.HistoryViewModel";
 
-      static String com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel = "com.armada.expiryapp.ui.screens.csvimport.CsvImportViewModel";
+      static String com_armada_expiryapp_ui_screens_stock_StockViewModel = "com.armada.expiryapp.ui.screens.stock.StockViewModel";
 
       @KeepFieldType
       SettingsViewModel com_armada_expiryapp_ui_screens_settings_SettingsViewModel2;
 
       @KeepFieldType
-      NewEntryViewModel com_armada_expiryapp_ui_screens_entry_NewEntryViewModel2;
-
-      @KeepFieldType
-      ReportsViewModel com_armada_expiryapp_ui_screens_reports_ReportsViewModel2;
-
-      @KeepFieldType
-      DashboardViewModel com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel2;
+      ItemLinkingViewModel com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel2;
 
       @KeepFieldType
       LoginViewModel com_armada_expiryapp_ui_screens_login_LoginViewModel2;
 
       @KeepFieldType
+      NewEntryViewModel com_armada_expiryapp_ui_screens_entry_NewEntryViewModel2;
+
+      @KeepFieldType
       StartupViewModel com_armada_expiryapp_ui_screens_startup_StartupViewModel2;
 
       @KeepFieldType
-      StockViewModel com_armada_expiryapp_ui_screens_stock_StockViewModel2;
+      DashboardViewModel com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel2;
 
       @KeepFieldType
-      ItemLinkingViewModel com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel2;
+      TeamLinkingViewModel com_armada_expiryapp_ui_screens_teamlinking_TeamLinkingViewModel2;
+
+      @KeepFieldType
+      CsvImportViewModel com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel2;
+
+      @KeepFieldType
+      ReportsViewModel com_armada_expiryapp_ui_screens_reports_ReportsViewModel2;
 
       @KeepFieldType
       HistoryViewModel com_armada_expiryapp_ui_screens_history_HistoryViewModel2;
 
       @KeepFieldType
-      CsvImportViewModel com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel2;
+      StockViewModel com_armada_expiryapp_ui_screens_stock_StockViewModel2;
     }
   }
 
@@ -508,6 +521,8 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
 
     private Provider<StockViewModel> stockViewModelProvider;
 
+    private Provider<TeamLinkingViewModel> teamLinkingViewModelProvider;
+
     private ViewModelCImpl(SingletonCImpl singletonCImpl,
         ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
         ViewModelLifecycle viewModelLifecycleParam) {
@@ -531,11 +546,12 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
       this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 7);
       this.startupViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 8);
       this.stockViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 9);
+      this.teamLinkingViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 10);
     }
 
     @Override
     public Map<Class<?>, javax.inject.Provider<ViewModel>> getHiltViewModelMap() {
-      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(10).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel, ((Provider) csvImportViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel, ((Provider) dashboardViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_history_HistoryViewModel, ((Provider) historyViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel, ((Provider) itemLinkingViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_login_LoginViewModel, ((Provider) loginViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_entry_NewEntryViewModel, ((Provider) newEntryViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_reports_ReportsViewModel, ((Provider) reportsViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_settings_SettingsViewModel, ((Provider) settingsViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_startup_StartupViewModel, ((Provider) startupViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_stock_StockViewModel, ((Provider) stockViewModelProvider)).build());
+      return LazyClassKeyMap.<javax.inject.Provider<ViewModel>>of(MapBuilder.<String, javax.inject.Provider<ViewModel>>newMapBuilder(11).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel, ((Provider) csvImportViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel, ((Provider) dashboardViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_history_HistoryViewModel, ((Provider) historyViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel, ((Provider) itemLinkingViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_login_LoginViewModel, ((Provider) loginViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_entry_NewEntryViewModel, ((Provider) newEntryViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_reports_ReportsViewModel, ((Provider) reportsViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_settings_SettingsViewModel, ((Provider) settingsViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_startup_StartupViewModel, ((Provider) startupViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_stock_StockViewModel, ((Provider) stockViewModelProvider)).put(LazyClassKeyProvider.com_armada_expiryapp_ui_screens_teamlinking_TeamLinkingViewModel, ((Provider) teamLinkingViewModelProvider)).build());
     }
 
     @Override
@@ -545,55 +561,60 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel = "com.armada.expiryapp.ui.screens.dashboard.DashboardViewModel";
-
-      static String com_armada_expiryapp_ui_screens_stock_StockViewModel = "com.armada.expiryapp.ui.screens.stock.StockViewModel";
-
-      static String com_armada_expiryapp_ui_screens_history_HistoryViewModel = "com.armada.expiryapp.ui.screens.history.HistoryViewModel";
-
-      static String com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel = "com.armada.expiryapp.ui.screens.csvimport.CsvImportViewModel";
-
-      static String com_armada_expiryapp_ui_screens_startup_StartupViewModel = "com.armada.expiryapp.ui.screens.startup.StartupViewModel";
-
       static String com_armada_expiryapp_ui_screens_login_LoginViewModel = "com.armada.expiryapp.ui.screens.login.LoginViewModel";
-
-      static String com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel = "com.armada.expiryapp.ui.screens.itemlinking.ItemLinkingViewModel";
 
       static String com_armada_expiryapp_ui_screens_entry_NewEntryViewModel = "com.armada.expiryapp.ui.screens.entry.NewEntryViewModel";
 
-      static String com_armada_expiryapp_ui_screens_settings_SettingsViewModel = "com.armada.expiryapp.ui.screens.settings.SettingsViewModel";
-
       static String com_armada_expiryapp_ui_screens_reports_ReportsViewModel = "com.armada.expiryapp.ui.screens.reports.ReportsViewModel";
 
-      @KeepFieldType
-      DashboardViewModel com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel2;
+      static String com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel = "com.armada.expiryapp.ui.screens.csvimport.CsvImportViewModel";
 
-      @KeepFieldType
-      StockViewModel com_armada_expiryapp_ui_screens_stock_StockViewModel2;
+      static String com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel = "com.armada.expiryapp.ui.screens.dashboard.DashboardViewModel";
 
-      @KeepFieldType
-      HistoryViewModel com_armada_expiryapp_ui_screens_history_HistoryViewModel2;
+      static String com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel = "com.armada.expiryapp.ui.screens.itemlinking.ItemLinkingViewModel";
 
-      @KeepFieldType
-      CsvImportViewModel com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel2;
+      static String com_armada_expiryapp_ui_screens_history_HistoryViewModel = "com.armada.expiryapp.ui.screens.history.HistoryViewModel";
 
-      @KeepFieldType
-      StartupViewModel com_armada_expiryapp_ui_screens_startup_StartupViewModel2;
+      static String com_armada_expiryapp_ui_screens_startup_StartupViewModel = "com.armada.expiryapp.ui.screens.startup.StartupViewModel";
+
+      static String com_armada_expiryapp_ui_screens_settings_SettingsViewModel = "com.armada.expiryapp.ui.screens.settings.SettingsViewModel";
+
+      static String com_armada_expiryapp_ui_screens_teamlinking_TeamLinkingViewModel = "com.armada.expiryapp.ui.screens.teamlinking.TeamLinkingViewModel";
+
+      static String com_armada_expiryapp_ui_screens_stock_StockViewModel = "com.armada.expiryapp.ui.screens.stock.StockViewModel";
 
       @KeepFieldType
       LoginViewModel com_armada_expiryapp_ui_screens_login_LoginViewModel2;
 
       @KeepFieldType
+      NewEntryViewModel com_armada_expiryapp_ui_screens_entry_NewEntryViewModel2;
+
+      @KeepFieldType
+      ReportsViewModel com_armada_expiryapp_ui_screens_reports_ReportsViewModel2;
+
+      @KeepFieldType
+      CsvImportViewModel com_armada_expiryapp_ui_screens_csvimport_CsvImportViewModel2;
+
+      @KeepFieldType
+      DashboardViewModel com_armada_expiryapp_ui_screens_dashboard_DashboardViewModel2;
+
+      @KeepFieldType
       ItemLinkingViewModel com_armada_expiryapp_ui_screens_itemlinking_ItemLinkingViewModel2;
 
       @KeepFieldType
-      NewEntryViewModel com_armada_expiryapp_ui_screens_entry_NewEntryViewModel2;
+      HistoryViewModel com_armada_expiryapp_ui_screens_history_HistoryViewModel2;
+
+      @KeepFieldType
+      StartupViewModel com_armada_expiryapp_ui_screens_startup_StartupViewModel2;
 
       @KeepFieldType
       SettingsViewModel com_armada_expiryapp_ui_screens_settings_SettingsViewModel2;
 
       @KeepFieldType
-      ReportsViewModel com_armada_expiryapp_ui_screens_reports_ReportsViewModel2;
+      TeamLinkingViewModel com_armada_expiryapp_ui_screens_teamlinking_TeamLinkingViewModel2;
+
+      @KeepFieldType
+      StockViewModel com_armada_expiryapp_ui_screens_stock_StockViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -621,7 +642,7 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
           return (T) new CsvImportViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.csvImportRepositoryProvider.get(), singletonCImpl.csvMetadataRepositoryProvider.get(), singletonCImpl.itemRepositoryProvider.get());
 
           case 1: // com.armada.expiryapp.ui.screens.dashboard.DashboardViewModel 
-          return (T) new DashboardViewModel(singletonCImpl.outletRepositoryProvider.get(), singletonCImpl.expiryEntryRepositoryProvider.get(), singletonCImpl.itemRepositoryProvider.get(), singletonCImpl.csvMetadataRepositoryProvider.get(), singletonCImpl.sessionHolderProvider.get());
+          return (T) new DashboardViewModel(singletonCImpl.outletRepositoryProvider.get(), singletonCImpl.expiryEntryRepositoryProvider.get(), singletonCImpl.itemRepositoryProvider.get(), singletonCImpl.csvMetadataRepositoryProvider.get(), singletonCImpl.sessionHolderProvider.get(), singletonCImpl.deviceLockRepositoryProvider.get(), singletonCImpl.teamLinkRepositoryProvider.get());
 
           case 2: // com.armada.expiryapp.ui.screens.history.HistoryViewModel 
           return (T) new HistoryViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.sessionHolderProvider.get(), singletonCImpl.expiryEntryRepositoryProvider.get(), singletonCImpl.outletRepositoryProvider.get());
@@ -639,13 +660,16 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
           return (T) new ReportsViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.sessionHolderProvider.get(), singletonCImpl.expiryEntryRepositoryProvider.get(), singletonCImpl.outletRepositoryProvider.get());
 
           case 7: // com.armada.expiryapp.ui.screens.settings.SettingsViewModel 
-          return (T) new SettingsViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.csvMetadataRepositoryProvider.get(), singletonCImpl.sessionHolderProvider.get(), singletonCImpl.outletItemLinkRepositoryProvider.get());
+          return (T) new SettingsViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.csvMetadataRepositoryProvider.get(), singletonCImpl.sessionHolderProvider.get(), singletonCImpl.outletItemLinkRepositoryProvider.get(), singletonCImpl.deviceLockRepositoryProvider.get(), singletonCImpl.teamLinkRepositoryProvider.get());
 
           case 8: // com.armada.expiryapp.ui.screens.startup.StartupViewModel 
           return (T) new StartupViewModel(singletonCImpl.authRepositoryProvider.get(), singletonCImpl.itemRepositoryProvider.get(), singletonCImpl.outletRepositoryProvider.get(), singletonCImpl.expiryEntryRepositoryProvider.get(), singletonCImpl.csvMetadataRepositoryProvider.get());
 
           case 9: // com.armada.expiryapp.ui.screens.stock.StockViewModel 
           return (T) new StockViewModel(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule), singletonCImpl.sessionHolderProvider.get(), singletonCImpl.stockEntryRepositoryProvider.get(), singletonCImpl.itemRepositoryProvider.get());
+
+          case 10: // com.armada.expiryapp.ui.screens.teamlinking.TeamLinkingViewModel 
+          return (T) new TeamLinkingViewModel(singletonCImpl.deviceLockRepositoryProvider.get(), singletonCImpl.teamLinkRepositoryProvider.get(), singletonCImpl.outletRepositoryProvider.get());
 
           default: throw new AssertionError(id);
         }
@@ -741,6 +765,10 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
 
     private Provider<SessionHolder> sessionHolderProvider;
 
+    private Provider<DeviceLockRepository> deviceLockRepositoryProvider;
+
+    private Provider<TeamLinkRepository> teamLinkRepositoryProvider;
+
     private Provider<OutletItemLinkRepository> outletItemLinkRepositoryProvider;
 
     private Provider<AuthRepository> authRepositoryProvider;
@@ -769,6 +797,14 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
       return DatabaseModule_ProvideCsvMetadataDaoFactory.provideCsvMetadataDao(provideDatabaseProvider.get());
     }
 
+    private DeviceLockDao deviceLockDao() {
+      return DatabaseModule_ProvideDeviceLockDaoFactory.provideDeviceLockDao(provideDatabaseProvider.get());
+    }
+
+    private TeamLinkDao teamLinkDao() {
+      return DatabaseModule_ProvideTeamLinkDaoFactory.provideTeamLinkDao(provideDatabaseProvider.get());
+    }
+
     private OutletItemLinkDao outletItemLinkDao() {
       return DatabaseModule_ProvideOutletItemLinkDaoFactory.provideOutletItemLinkDao(provideDatabaseProvider.get());
     }
@@ -786,9 +822,11 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
       this.itemRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<ItemRepository>(singletonCImpl, 4));
       this.outletRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<OutletRepository>(singletonCImpl, 5));
       this.sessionHolderProvider = DoubleCheck.provider(new SwitchingProvider<SessionHolder>(singletonCImpl, 6));
-      this.outletItemLinkRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<OutletItemLinkRepository>(singletonCImpl, 7));
-      this.authRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<AuthRepository>(singletonCImpl, 8));
-      this.stockEntryRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<StockEntryRepository>(singletonCImpl, 9));
+      this.deviceLockRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<DeviceLockRepository>(singletonCImpl, 7));
+      this.teamLinkRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<TeamLinkRepository>(singletonCImpl, 8));
+      this.outletItemLinkRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<OutletItemLinkRepository>(singletonCImpl, 9));
+      this.authRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<AuthRepository>(singletonCImpl, 10));
+      this.stockEntryRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<StockEntryRepository>(singletonCImpl, 11));
     }
 
     @Override
@@ -850,13 +888,19 @@ public final class DaggerArmadaApplication_HiltComponents_SingletonC {
           case 6: // com.armada.expiryapp.data.session.SessionHolder 
           return (T) new SessionHolder();
 
-          case 7: // com.armada.expiryapp.data.repository.OutletItemLinkRepository 
+          case 7: // com.armada.expiryapp.data.repository.DeviceLockRepository 
+          return (T) new DeviceLockRepository(singletonCImpl.deviceLockDao());
+
+          case 8: // com.armada.expiryapp.data.repository.TeamLinkRepository 
+          return (T) new TeamLinkRepository(singletonCImpl.teamLinkDao());
+
+          case 9: // com.armada.expiryapp.data.repository.OutletItemLinkRepository 
           return (T) new OutletItemLinkRepository(singletonCImpl.outletItemLinkDao());
 
-          case 8: // com.armada.expiryapp.data.auth.AuthRepository 
+          case 10: // com.armada.expiryapp.data.auth.AuthRepository 
           return (T) new AuthRepository(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
-          case 9: // com.armada.expiryapp.data.repository.StockEntryRepository 
+          case 11: // com.armada.expiryapp.data.repository.StockEntryRepository 
           return (T) new StockEntryRepository(singletonCImpl.stockEntryDao());
 
           default: throw new AssertionError(id);

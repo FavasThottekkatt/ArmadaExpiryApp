@@ -174,21 +174,16 @@ fun SettingsDrawerContent(
             // ── Item Linking (disabled until Team Linking complete) ────────────
             SectionHeader(icon = Icons.Filled.Link, title = "ITEM LINKING")
 
-            val hasOutlet        = viewModel.hasOutlet
-            val itemLinkEnabled  = isTeamLinkingComplete && hasOutlet
             OutlinedButton(
-                onClick  = { if (itemLinkEnabled) onItemLinking() },
-                enabled  = itemLinkEnabled,
+                onClick  = { if (isTeamLinkingComplete) onItemLinking() },
+                enabled  = isTeamLinkingComplete,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             ) {
                 Text(
-                    when {
-                        !isTeamLinkingComplete -> "Item Linking — complete Team Linking first"
-                        !hasOutlet             -> "Item Linking — no outlet selected"
-                        else                   -> "Item Linking — $linkedItemCount items linked"
-                    }
+                    if (isTeamLinkingComplete) "Item Linking — tap to manage"
+                    else "Item Linking — complete Team Linking first"
                 )
             }
 

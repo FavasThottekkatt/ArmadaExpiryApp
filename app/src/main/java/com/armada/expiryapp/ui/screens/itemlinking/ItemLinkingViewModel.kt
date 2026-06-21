@@ -8,9 +8,11 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.armada.expiryapp.data.db.entity.Item
 import com.armada.expiryapp.data.db.entity.OutletItemLink
+import com.armada.expiryapp.data.db.entity.TeamLink
+import com.armada.expiryapp.data.repository.DeviceLockRepository
 import com.armada.expiryapp.data.repository.ItemRepository
 import com.armada.expiryapp.data.repository.OutletItemLinkRepository
-import com.armada.expiryapp.data.session.SessionHolder
+import com.armada.expiryapp.data.repository.TeamLinkRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
@@ -31,22 +33,34 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ItemLinkingViewModel @Inject constructor(
-    val sessionHolder:  SessionHolder,
-    private val itemRepository: ItemRepository,
-    private val linkRepository: OutletItemLinkRepository,
+    private val deviceLockRepository: DeviceLockRepository,
+    private val teamLinkRepository:   TeamLinkRepository,
+    private val itemRepository:       ItemRepository,
+    private val linkRepository:       OutletItemLinkRepository,
 ) : ViewModel() {
-
-    val outletCode: String get() = sessionHolder.outletCode
-    val outletName: String get() = sessionHolder.outletName
 
     private val handler = CoroutineExceptionHandler { _, t ->
         _snackMessage.tryEmit("Error: ${t.localizedMessage ?: "Unknown"}")
     }
 
+    // ── Linked outlets for this device ────────────────────────────────────────
+
+    private val _linkedOutlets = MutableStateFlow<List<TeamLink>>(emptyList())
+    val linkedOutlets: StateFlow<List<TeamLink>> = _linkedOutlets.asStateFlow()
+
+    // ── Selected outlet ───────────────────────────────────────────────────────
+
+    private val _selectedOutletCode = MutableStateFlow("")
+    private val _selectedOutletName = MutableStateFlow("")
+    val selectedOutletCode: StateFlow<String> = _selectedOutletCode.asStateFlow()
+    val selectedOutletName: StateFlow<String> = _selectedOutletName.asStateFlow()
+
+    // ── Item search ───────────────────────────────────────────────────────────
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    // Set of barcodes currently linked to this outlet
+    // Set of barcodes currently linked to the selected outlet
     private val _linkedBarcodes = MutableStateFlow<Set<String>>(emptySet())
     val linkedBarcodes: StateFlow<Set<String>> = _linkedBarcodes.asStateFlow()
 
@@ -68,19 +82,36 @@ class ItemLinkingViewModel @Inject constructor(
         .cachedIn(viewModelScope)
 
     init {
-        loadLinkedBarcodes()
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val lock = deviceLockRepository.get()
+            if (lock != null) {
+                _linkedOutlets.value = teamLinkRepository.getAllForMerchandiser(lock.merchandiserName)
+            }
+        }
     }
 
-    private fun loadLinkedBarcodes() {
+    // ── Outlet selection ──────────────────────────────────────────────────────
+
+    fun selectOutlet(outletCode: String, outletName: String) {
+        _selectedOutletCode.value = outletCode
+        _selectedOutletName.value = outletName
+        loadLinkedBarcodes(outletCode)
+    }
+
+    private fun loadLinkedBarcodes(outletCode: String) {
         viewModelScope.launch(Dispatchers.IO + handler) {
             val links = linkRepository.getAllForOutlet(outletCode)
             _linkedBarcodes.value = links.map { it.barcode }.toSet()
         }
     }
 
+    // ── Item actions ──────────────────────────────────────────────────────────
+
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
     fun toggleLink(item: Item) {
+        val outletCode = _selectedOutletCode.value
+        if (outletCode.isBlank()) return
         val barcode = item.barcode
         val linked  = barcode in _linkedBarcodes.value
         viewModelScope.launch(Dispatchers.IO + handler) {
@@ -101,17 +132,25 @@ class ItemLinkingViewModel @Inject constructor(
         }
     }
 
-    // Links all items matching the current search query (fetches fresh from DB — no paging limit)
     fun linkAllShown() {
+        val outletCode = _selectedOutletCode.value
+        if (outletCode.isBlank()) return
         val query = _searchQuery.value
         viewModelScope.launch(Dispatchers.IO + handler) {
             val allMatching = if (query.isBlank()) itemRepository.getAll()
                               else itemRepository.searchAll(query)
             val toLink = allMatching.filter { it.barcode !in _linkedBarcodes.value }
-            if (toLink.isEmpty()) { _snackMessage.tryEmit("All shown items are already linked."); return@launch }
+            if (toLink.isEmpty()) {
+                _snackMessage.tryEmit("All shown items are already linked.")
+                return@launch
+            }
             val newLinks = toLink.map {
-                OutletItemLink(outletCode = outletCode, barcode = it.barcode,
-                               description = it.description, productCode = it.productCode)
+                OutletItemLink(
+                    outletCode  = outletCode,
+                    barcode     = it.barcode,
+                    description = it.description,
+                    productCode = it.productCode,
+                )
             }
             linkRepository.insertAll(newLinks)
             _linkedBarcodes.update { current -> current + toLink.map { it.barcode }.toSet() }
@@ -122,6 +161,8 @@ class ItemLinkingViewModel @Inject constructor(
     fun requestClearAll() { _showClearDialog.value = true }
     fun dismissClearAll() { _showClearDialog.value = false }
     fun confirmClearAll() {
+        val outletCode = _selectedOutletCode.value
+        if (outletCode.isBlank()) return
         _showClearDialog.value = false
         viewModelScope.launch(Dispatchers.IO + handler) {
             linkRepository.deleteAllForOutlet(outletCode)

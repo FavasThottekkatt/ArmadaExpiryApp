@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -29,13 +28,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -58,9 +55,6 @@ import com.armada.expiryapp.data.db.entity.ExpiryEntry
 import com.armada.expiryapp.data.db.entity.Outlet
 import com.armada.expiryapp.ui.theme.ArmadaColors
 import com.armada.expiryapp.util.toDisplayDate
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun HistoryScreen(
@@ -72,11 +66,9 @@ fun HistoryScreen(
     val selectedOutlet   by viewModel.selectedOutlet.collectAsState()
     val outletQuery      by viewModel.outletQuery.collectAsState()
     val outletResults    by viewModel.outletResults.collectAsState()
-    val archivedCount    by viewModel.archivedCount.collectAsState()
-    val isArchiving      by viewModel.isArchiving.collectAsState()
-    val isExporting      by viewModel.isExporting.collectAsState()
-    val showArchiveDialog by viewModel.showArchiveDialog.collectAsState()
-    val entries          = viewModel.archivedEntries.collectAsLazyPagingItems()
+    val archivedCount by viewModel.archivedCount.collectAsState()
+    val isExporting   by viewModel.isExporting.collectAsState()
+    val entries       = viewModel.archivedEntries.collectAsLazyPagingItems()
 
     LaunchedEffect(Unit) {
         viewModel.snackMessage.collect { msg -> snackbarHostState.showSnackbar(msg) }
@@ -103,33 +95,6 @@ fun HistoryScreen(
         }
     }
 
-    // ── Archive confirmation dialog ────────────────────────────────────────────
-    if (showArchiveDialog) {
-        val outlet = selectedOutlet
-        val monthLabel = LocalDate.now()
-            .format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault()))
-        AlertDialog(
-            onDismissRequest = viewModel::dismissArchiveDialog,
-            title = {
-                Text("Archive This Month?", color = ArmadaColors.BrandTitle, fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Text(
-                    "All active expiry entries for ${outlet?.outletName ?: "this outlet"} " +
-                    "entered in $monthLabel will be archived. This cannot be undone."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = viewModel::confirmArchive) {
-                    Text("Archive", color = ArmadaColors.StatusExpired, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::dismissArchiveDialog) { Text("Cancel") }
-            },
-        )
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -147,40 +112,17 @@ fun HistoryScreen(
                 onClear        = viewModel::clearOutletSelection,
             )
 
-            // ── Action buttons ────────────────────────────────────────────────
+            // ── Action button ─────────────────────────────────────────────────
             Row(
-                modifier              = Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .background(ArmadaColors.BgCard)
                     .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedButton(
-                    onClick  = viewModel::requestArchive,
-                    enabled  = selectedOutlet != null && !isArchiving,
-                    modifier = Modifier.weight(1f),
-                    colors   = ButtonDefaults.outlinedButtonColors(
-                        contentColor         = ArmadaColors.StatusExpired,
-                        disabledContentColor = ArmadaColors.Disabled,
-                    ),
-                ) {
-                    if (isArchiving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .height(16.dp)
-                                .width(16.dp),
-                            strokeWidth = 2.dp,
-                            color       = ArmadaColors.StatusExpired,
-                        )
-                    } else {
-                        Text("Archive This Month", fontSize = 12.sp)
-                    }
-                }
-
                 Button(
                     onClick  = viewModel::exportHistory,
                     enabled  = selectedOutlet != null && archivedCount > 0 && !isExporting,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     colors   = ButtonDefaults.buttonColors(
                         containerColor         = ArmadaColors.BrandAccent,
                         disabledContainerColor = ArmadaColors.Disabled,
@@ -188,9 +130,7 @@ fun HistoryScreen(
                 ) {
                     if (isExporting) {
                         CircularProgressIndicator(
-                            modifier = Modifier
-                                .height(16.dp)
-                                .width(16.dp),
+                            modifier    = Modifier.height(16.dp).width(16.dp),
                             strokeWidth = 2.dp,
                             color       = Color.White,
                         )
