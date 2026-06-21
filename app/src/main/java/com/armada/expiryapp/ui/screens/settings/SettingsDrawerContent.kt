@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material3.AlertDialog
@@ -37,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -52,15 +54,17 @@ import java.util.Locale
 
 @Composable
 fun SettingsDrawerContent(
-    onReimport:    () -> Unit,
-    onItemLinking: () -> Unit,
+    onReimport:     () -> Unit,
+    onItemLinking:  () -> Unit,
+    onTeamLinking:  () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
-    val context          = LocalContext.current
-    val backupFiles      by viewModel.backupFiles.collectAsState()
-    val crashLogContent  by viewModel.crashLogContent.collectAsState()
-    val linkedItemCount  by viewModel.linkedItemCount.collectAsState()
-    val snackState       = remember { SnackbarHostState() }
+    val context              = LocalContext.current
+    val backupFiles          by viewModel.backupFiles.collectAsState()
+    val crashLogContent      by viewModel.crashLogContent.collectAsState()
+    val linkedItemCount      by viewModel.linkedItemCount.collectAsState()
+    val isTeamLinkingComplete by viewModel.isTeamLinkingComplete.collectAsState()
+    val snackState           = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
         viewModel.refreshLinkedCount()
@@ -138,6 +142,23 @@ fun SettingsDrawerContent(
                 )
             }
 
+            // ── Team Linking (FIRST — required before app use) ────────────────
+            SectionHeader(icon = Icons.Filled.Group, title = "TEAM LINKING")
+
+            OutlinedButton(
+                onClick  = onTeamLinking,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    if (isTeamLinkingComplete) "Team Linking ✓ (tap to edit)"
+                    else "Team Linking ⚠ (required — tap to set up)"
+                )
+            }
+
+            SectionDivider()
+
             // ── Re-import ─────────────────────────────────────────────────────
             OutlinedButton(
                 onClick  = onReimport,
@@ -150,20 +171,24 @@ fun SettingsDrawerContent(
 
             SectionDivider()
 
-            // ── Item Linking ───────────────────────────────────────────────────
+            // ── Item Linking (disabled until Team Linking complete) ────────────
             SectionHeader(icon = Icons.Filled.Link, title = "ITEM LINKING")
 
-            val hasOutlet = viewModel.hasOutlet
+            val hasOutlet        = viewModel.hasOutlet
+            val itemLinkEnabled  = isTeamLinkingComplete && hasOutlet
             OutlinedButton(
-                onClick  = { if (hasOutlet) onItemLinking() },
-                enabled  = hasOutlet,
+                onClick  = { if (itemLinkEnabled) onItemLinking() },
+                enabled  = itemLinkEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
             ) {
                 Text(
-                    if (hasOutlet) "Item Linking — $linkedItemCount items linked"
-                    else "Item Linking — no outlet selected"
+                    when {
+                        !isTeamLinkingComplete -> "Item Linking — complete Team Linking first"
+                        !hasOutlet             -> "Item Linking — no outlet selected"
+                        else                   -> "Item Linking — $linkedItemCount items linked"
+                    }
                 )
             }
 
@@ -206,12 +231,8 @@ fun SettingsDrawerContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 ) {
-                    OutlinedButton(onClick = {
-                        viewModel.loadCrashLog()
-                    }) { Text("View") }
-
+                    OutlinedButton(onClick = { viewModel.loadCrashLog() }) { Text("View") }
                     OutlinedButton(onClick = viewModel::shareCrashLog) { Text("Share") }
-
                     TextButton(onClick = viewModel::clearCrashLog) {
                         Text("Clear", color = MaterialTheme.colorScheme.error)
                     }
@@ -258,7 +279,7 @@ fun SettingsDrawerContent(
 @Composable
 private fun SectionHeader(icon: ImageVector, title: String) {
     Row(
-        verticalAlignment  = Alignment.CenterVertically,
+        verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .fillMaxWidth()

@@ -6,11 +6,14 @@ import androidx.lifecycle.viewModelScope
 import com.armada.expiryapp.BuildConfig
 import com.armada.expiryapp.data.db.entity.CsvMetadata
 import com.armada.expiryapp.data.repository.CsvMetadataRepository
+import com.armada.expiryapp.data.repository.DeviceLockRepository
 import com.armada.expiryapp.data.repository.OutletItemLinkRepository
+import com.armada.expiryapp.data.repository.TeamLinkRepository
 import com.armada.expiryapp.data.session.SessionHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -18,6 +21,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -31,10 +37,20 @@ class SettingsViewModel @Inject constructor(
     private val csvMetadataRepository: CsvMetadataRepository,
     private val sessionHolder: SessionHolder,
     private val linkRepository: OutletItemLinkRepository,
+    private val deviceLockRepository: DeviceLockRepository,
+    private val teamLinkRepository: TeamLinkRepository,
 ) : ViewModel() {
 
     val csvMetadata: StateFlow<List<CsvMetadata>> = csvMetadataRepository.getAllFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val isTeamLinkingComplete: StateFlow<Boolean> = deviceLockRepository.getFlow()
+        .flatMapLatest { lock ->
+            if (lock == null) flowOf(false)
+            else teamLinkRepository.getCountFlow(lock.merchandiserName).map { it > 0 }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     private val _backupFiles = MutableStateFlow<List<File>>(emptyList())
     val backupFiles: StateFlow<List<File>> = _backupFiles.asStateFlow()

@@ -64,23 +64,23 @@ public final class ItemDao_Impl implements ItemDao {
   }
 
   @Override
-  public Object insertAll(final List<Item> items, final Continuation<? super Unit> $completion) {
+  public Object insertAll(final List<Item> items, final Continuation<? super Unit> arg1) {
     if (items == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       __insertAdapterOfItem.insert(_connection, items);
       return Unit.INSTANCE;
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object replaceAll(final List<Item> items, final Continuation<? super Unit> $completion) {
+  public Object replaceAll(final List<Item> items, final Continuation<? super Unit> arg1) {
     return DBUtil.performInTransactionSuspending(__db, (_cont) -> {
       return ItemDao.DefaultImpls.replaceAll(ItemDao_Impl.this, items, _cont);
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object findByBarcode(final String barcode, final Continuation<? super Item> $completion) {
+  public Object findByBarcode(final String barcode, final Continuation<? super Item> arg1) {
     final String _sql = "SELECT * FROM items WHERE barcode = ? LIMIT 1";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -125,11 +125,11 @@ public final class ItemDao_Impl implements ItemDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object findByProductCode(final String code, final Continuation<? super Item> $completion) {
+  public Object findByProductCode(final String code, final Continuation<? super Item> arg1) {
     final String _sql = "SELECT * FROM items WHERE productCode = ? LIMIT 1";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -174,7 +174,7 @@ public final class ItemDao_Impl implements ItemDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -303,8 +303,7 @@ public final class ItemDao_Impl implements ItemDao {
   }
 
   @Override
-  public Object searchForDropdown(final String query,
-      final Continuation<? super List<Item>> $completion) {
+  public Object searchForDropdown(final String query, final Continuation<? super List<Item>> arg1) {
     final String _sql = "\n"
             + "        SELECT * FROM items\n"
             + "        WHERE description LIKE '%' || ? || '%'\n"
@@ -361,11 +360,11 @@ public final class ItemDao_Impl implements ItemDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getAll(final Continuation<? super List<Item>> $completion) {
+  public Object getAll(final Continuation<? super List<Item>> arg0) {
     final String _sql = "SELECT * FROM items ORDER BY description ASC";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -404,11 +403,11 @@ public final class ItemDao_Impl implements ItemDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override
-  public Object searchAll(final String query, final Continuation<? super List<Item>> $completion) {
+  public Object searchAll(final String query, final Continuation<? super List<Item>> arg1) {
     final String _sql = "\n"
             + "        SELECT * FROM items\n"
             + "        WHERE description LIKE '%' || ? || '%'\n"
@@ -464,11 +463,11 @@ public final class ItemDao_Impl implements ItemDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getCount(final Continuation<? super Integer> $completion) {
+  public Object getCount(final Continuation<? super Integer> arg0) {
     final String _sql = "SELECT COUNT(*) FROM items";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -489,11 +488,11 @@ public final class ItemDao_Impl implements ItemDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override
-  public Object deleteAll(final Continuation<? super Unit> $completion) {
+  public Object deleteAll(final Continuation<? super Unit> arg0) {
     final String _sql = "DELETE FROM items";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -503,7 +502,7 @@ public final class ItemDao_Impl implements ItemDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @NonNull

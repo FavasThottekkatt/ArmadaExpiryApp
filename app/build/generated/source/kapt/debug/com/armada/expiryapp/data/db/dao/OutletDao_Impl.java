@@ -64,21 +64,19 @@ public final class OutletDao_Impl implements OutletDao {
   }
 
   @Override
-  public Object insertAll(final List<Outlet> outlets,
-      final Continuation<? super Unit> $completion) {
+  public Object insertAll(final List<Outlet> outlets, final Continuation<? super Unit> arg1) {
     if (outlets == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       __insertAdapterOfOutlet.insert(_connection, outlets);
       return Unit.INSTANCE;
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object replaceAll(final List<Outlet> outlets,
-      final Continuation<? super Unit> $completion) {
+  public Object replaceAll(final List<Outlet> outlets, final Continuation<? super Unit> arg1) {
     return DBUtil.performInTransactionSuspending(__db, (_cont) -> {
       return OutletDao.DefaultImpls.replaceAll(OutletDao_Impl.this, outlets, _cont);
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -157,7 +155,7 @@ public final class OutletDao_Impl implements OutletDao {
 
   @Override
   public Object searchForDropdown(final String query,
-      final Continuation<? super List<Outlet>> $completion) {
+      final Continuation<? super List<Outlet>> arg1) {
     final String _sql = "\n"
             + "        SELECT * FROM outlets\n"
             + "        WHERE outletName LIKE '%' || ? || '%'\n"
@@ -214,11 +212,11 @@ public final class OutletDao_Impl implements OutletDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getAll(final Continuation<? super List<Outlet>> $completion) {
+  public Object getAll(final Continuation<? super List<Outlet>> arg0) {
     final String _sql = "SELECT * FROM outlets ORDER BY outletName ASC";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -257,11 +255,11 @@ public final class OutletDao_Impl implements OutletDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override
-  public Object findByCode(final String code, final Continuation<? super Outlet> $completion) {
+  public Object findByCode(final String code, final Continuation<? super Outlet> arg1) {
     final String _sql = "SELECT * FROM outlets WHERE outletCode = ? LIMIT 1";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -306,11 +304,11 @@ public final class OutletDao_Impl implements OutletDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getCount(final Continuation<? super Integer> $completion) {
+  public Object getCount(final Continuation<? super Integer> arg0) {
     final String _sql = "SELECT COUNT(*) FROM outlets";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -331,11 +329,11 @@ public final class OutletDao_Impl implements OutletDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override
-  public Object deleteAll(final Continuation<? super Unit> $completion) {
+  public Object deleteAll(final Continuation<? super Unit> arg0) {
     final String _sql = "DELETE FROM outlets";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -345,7 +343,7 @@ public final class OutletDao_Impl implements OutletDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @NonNull

@@ -63,17 +63,16 @@ public final class CsvMetadataDao_Impl implements CsvMetadataDao {
   }
 
   @Override
-  public Object upsert(final CsvMetadata metadata, final Continuation<? super Unit> $completion) {
+  public Object upsert(final CsvMetadata metadata, final Continuation<? super Unit> arg1) {
     if (metadata == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       __insertAdapterOfCsvMetadata.insert(_connection, metadata);
       return Unit.INSTANCE;
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getByType(final String fileType,
-      final Continuation<? super CsvMetadata> $completion) {
+  public Object getByType(final String fileType, final Continuation<? super CsvMetadata> arg1) {
     final String _sql = "SELECT * FROM csv_metadata WHERE fileType = ? LIMIT 1";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -121,11 +120,11 @@ public final class CsvMetadataDao_Impl implements CsvMetadataDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getAll(final Continuation<? super List<CsvMetadata>> $completion) {
+  public Object getAll(final Continuation<? super List<CsvMetadata>> arg0) {
     final String _sql = "SELECT * FROM csv_metadata";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -167,7 +166,7 @@ public final class CsvMetadataDao_Impl implements CsvMetadataDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override

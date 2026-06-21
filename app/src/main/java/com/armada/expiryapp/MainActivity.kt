@@ -217,6 +217,12 @@ private fun ArmadaApp(
                             launchSingleTop = true
                         }
                     },
+                    onTeamLinking = {
+                        scope.launch { drawerState.close() }
+                        navController.navigate(Screen.TeamLinking.route) {
+                            launchSingleTop = true
+                        }
+                    },
                     onItemLinking = {
                         scope.launch { drawerState.close() }
                         navController.navigate(Screen.ItemLinking.route) {

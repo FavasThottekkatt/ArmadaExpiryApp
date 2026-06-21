@@ -9,9 +9,11 @@ import androidx.paging.cachedIn
 import com.armada.expiryapp.data.db.entity.ExpiryEntry
 import com.armada.expiryapp.data.db.entity.Outlet
 import com.armada.expiryapp.data.repository.CsvMetadataRepository
+import com.armada.expiryapp.data.repository.DeviceLockRepository
 import com.armada.expiryapp.data.repository.ExpiryEntryRepository
 import com.armada.expiryapp.data.repository.ItemRepository
 import com.armada.expiryapp.data.repository.OutletRepository
+import com.armada.expiryapp.data.repository.TeamLinkRepository
 import com.armada.expiryapp.data.session.SessionHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -27,6 +29,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -40,24 +43,11 @@ class DashboardViewModel @Inject constructor(
     private val itemRepository:        ItemRepository,
     private val csvMetadataRepository: CsvMetadataRepository,
     private val sessionHolder:         SessionHolder,
+    private val deviceLockRepository:  DeviceLockRepository,
+    private val teamLinkRepository:    TeamLinkRepository,
 ) : ViewModel() {
 
-    companion object {
-        val MERCHANDISERS = listOf(
-            "AKHIL KAKKARA ANILAN", "AKHIL SUNNY THARAYIL", "AMRIT PARIYAR",
-            "BHIMKAJI TAMANG", "BIMAL SUNWAR", "DILIP KUMAR CHHETRI",
-            "FIROZKHAN C SULAIMAN", "KRISHNA SHAHI", "NARAYAN GIRI", "SANIL JAGALRAJ",
-            "SHUHAIB P", "SUSHIL THING TAMANG", "VISHNU GOPAKUMAR",
-            "RAMEES RAJILABEEVI", "MUKESH SHRESHTHA", "OMKARA BABU BANDI",
-            "MOHAMMED HASSAN", "ABID ALUNGAL", "KUNJI MOIDEEN", "SARATH MAKKAKOD",
-            "SARATH RAJ PR", "MOHAMMED SHAN", "AKBAR SULTAN",
-        )
-        val SALESMEN = listOf(
-            "Muneer", "Rajesh Shrestha", "Noushir", "Sreejith", "Shiva", "Ramraj", "Vishnu Jayalal",
-        )
-    }
-
-    // ── Stat card counts ──────────────────────────────────────────────────────
+    // ── Inner data classes ────────────────────────────────────────────────────
 
     data class DashboardStats(
         val expired:  Int = 0,
@@ -66,15 +56,11 @@ class DashboardViewModel @Inject constructor(
         val within90: Int = 0,
     )
 
-    // ── Session recovery ──────────────────────────────────────────────────────
-
     data class SessionRecovery(
         val outletName: String,
         val outletCode: String,
         val entryCount: Int,
     )
-
-    // ── Master data info strip ────────────────────────────────────────────────
 
     data class MasterDataInfo(
         val itemCount:   Int,
@@ -86,33 +72,46 @@ class DashboardViewModel @Inject constructor(
 
     private val handler = CoroutineExceptionHandler { _, _ -> }
 
-    // ── Form state (Step 1 — Outlet Details) ──────────────────────────────────
+    // ── Team Linking state ────────────────────────────────────────────────────
 
-    private val _merchandiser = MutableStateFlow("")
-    val merchandiser: StateFlow<String> = _merchandiser.asStateFlow()
+    val isTeamLinkingComplete: StateFlow<Boolean> = deviceLockRepository.getFlow()
+        .flatMapLatest { lock ->
+            if (lock == null) flowOf(false)
+            else teamLinkRepository.getCountFlow(lock.merchandiserName).map { it > 0 }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    private val _salesman = MutableStateFlow("")
-    val salesman: StateFlow<String> = _salesman.asStateFlow()
+    private val teamLinks = deviceLockRepository.getFlow()
+        .flatMapLatest { lock ->
+            if (lock == null) flowOf(emptyList())
+            else teamLinkRepository.getAllForMerchandiserFlow(lock.merchandiserName)
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    private val _outletName = MutableStateFlow("")
+    // Internal merchandiser/salesman — auto-filled from DB, never shown in UI
+    private val _currentMerchandiser = MutableStateFlow("")
+    private val _currentSalesman     = MutableStateFlow("")
+
+    // ── Form state ────────────────────────────────────────────────────────────
+
+    private val _outletName    = MutableStateFlow("")
     val outletName: StateFlow<String> = _outletName.asStateFlow()
 
-    private val _outletCode = MutableStateFlow("")
+    private val _outletCode    = MutableStateFlow("")
     val outletCode: StateFlow<String> = _outletCode.asStateFlow()
 
-    private val _outletQuery = MutableStateFlow("")
+    private val _outletQuery   = MutableStateFlow("")
     private val _outletResults = MutableStateFlow<List<Outlet>>(emptyList())
     val outletResults: StateFlow<List<Outlet>> = _outletResults.asStateFlow()
 
     private val _showFieldErrors = MutableStateFlow(false)
     val showFieldErrors: StateFlow<Boolean> = _showFieldErrors.asStateFlow()
 
-    val isFormComplete: StateFlow<Boolean> = combine(
-        _merchandiser, _salesman, _outletName,
-    ) { m, s, o -> m.isNotBlank() && s.isNotBlank() && o.isNotBlank() }
+    val isFormComplete: StateFlow<Boolean> = _outletName
+        .map { it.isNotBlank() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    // ── Session recovery state ────────────────────────────────────────────────
+    // ── Session recovery ──────────────────────────────────────────────────────
 
     private val _sessionRecovery = MutableStateFlow<SessionRecovery?>(null)
     val sessionRecovery: StateFlow<SessionRecovery?> = _sessionRecovery.asStateFlow()
@@ -122,7 +121,7 @@ class DashboardViewModel @Inject constructor(
     private val _masterDataInfo = MutableStateFlow<MasterDataInfo?>(null)
     val masterDataInfo: StateFlow<MasterDataInfo?> = _masterDataInfo.asStateFlow()
 
-    // ── Dashboard stats (reactive — updates when entries change) ──────────────
+    // ── Dashboard stats ───────────────────────────────────────────────────────
 
     val stats: StateFlow<DashboardStats> = _outletCode
         .flatMapLatest { code ->
@@ -143,9 +142,9 @@ class DashboardViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, DashboardStats())
 
-    // ── Latest records paging ─────────────────────────────────────────────────
+    // ── Paging ────────────────────────────────────────────────────────────────
 
-    private val _rawSearchQuery      = MutableStateFlow("")
+    private val _rawSearchQuery       = MutableStateFlow("")
     private val _debouncedSearchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _rawSearchQuery.asStateFlow()
 
@@ -171,19 +170,26 @@ class DashboardViewModel @Inject constructor(
         startSearchDebounce()
         loadMasterDataInfo()
         checkSessionRecovery()
+        loadLockedMerchandiser()
     }
 
-    @OptIn(FlowPreview::class)
     private fun startOutletSearch() {
         viewModelScope.launch(Dispatchers.IO + handler) {
             _outletQuery.debounce(150L).collect { query ->
-                _outletResults.value = if (query.isBlank()) emptyList()
-                else outletRepository.searchForDropdown(query)
+                if (query.isBlank()) {
+                    _outletResults.value = emptyList()
+                    return@collect
+                }
+                // Search only within linked outlets for this merchandiser
+                val links = teamLinks.value
+                _outletResults.value = links
+                    .filter { it.outletName.contains(query, ignoreCase = true) }
+                    .take(30)
+                    .map { Outlet(outletCode = it.outletCode, outletName = it.outletName, shortName = "") }
             }
         }
     }
 
-    @OptIn(FlowPreview::class)
     private fun startSearchDebounce() {
         viewModelScope.launch(Dispatchers.IO + handler) {
             _rawSearchQuery.debounce(200L).collect { query ->
@@ -208,12 +214,11 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    fun dismissSessionRecovery() { _sessionRecovery.value = null }
-
-    fun continueSession(recovery: SessionRecovery) {
-        _outletName.value      = recovery.outletName
-        _outletCode.value      = recovery.outletCode
-        _sessionRecovery.value = null
+    private fun loadLockedMerchandiser() {
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val lock = deviceLockRepository.get()
+            if (lock != null) _currentMerchandiser.value = lock.merchandiserName
+        }
     }
 
     private fun loadMasterDataInfo() {
@@ -227,10 +232,21 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    // ── Form actions ──────────────────────────────────────────────────────────
+    // ── Session recovery actions ──────────────────────────────────────────────
 
-    fun setMerchandiser(v: String) { _merchandiser.value = v }
-    fun setSalesman(v: String)     { _salesman.value     = v }
+    fun dismissSessionRecovery() { _sessionRecovery.value = null }
+
+    fun continueSession(recovery: SessionRecovery) {
+        _outletName.value      = recovery.outletName
+        _outletCode.value      = recovery.outletCode
+        _sessionRecovery.value = null
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val link = teamLinkRepository.findByOutletCode(recovery.outletCode)
+            if (link != null) _currentSalesman.value = link.salesmanName
+        }
+    }
+
+    // ── Form actions ──────────────────────────────────────────────────────────
 
     fun setOutletQuery(query: String) {
         _outletName.value  = query
@@ -243,19 +259,19 @@ class DashboardViewModel @Inject constructor(
         _outletCode.value    = outlet.outletCode
         _outletQuery.value   = ""
         _outletResults.value = emptyList()
+        viewModelScope.launch(Dispatchers.IO + handler) {
+            val link = teamLinkRepository.findByOutletCode(outlet.outletCode)
+            if (link != null) _currentSalesman.value = link.salesmanName
+        }
     }
 
-    fun setOutletCode(v: String) { _outletCode.value = v }
-
     fun onNextTapped(): Boolean {
-        val ok = _merchandiser.value.isNotBlank()
-                && _salesman.value.isNotBlank()
-                && _outletName.value.isNotBlank()
+        val ok = _outletName.value.isNotBlank()
         _showFieldErrors.value = !ok
         if (ok) {
             sessionHolder.set(
-                merchandiser = _merchandiser.value,
-                salesman     = _salesman.value,
+                merchandiser = _currentMerchandiser.value,
+                salesman     = _currentSalesman.value,
                 outletName   = _outletName.value,
                 outletCode   = _outletCode.value,
             )

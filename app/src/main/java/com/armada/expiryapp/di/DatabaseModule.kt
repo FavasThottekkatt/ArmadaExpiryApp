@@ -7,17 +7,44 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.armada.expiryapp.data.db.AppDatabase
 import com.armada.expiryapp.data.db.dao.CsvMetadataDao
+import com.armada.expiryapp.data.db.dao.DeviceLockDao
 import com.armada.expiryapp.data.db.dao.ExpiryEntryDao
 import com.armada.expiryapp.data.db.dao.ItemDao
 import com.armada.expiryapp.data.db.dao.OutletDao
 import com.armada.expiryapp.data.db.dao.OutletItemLinkDao
 import com.armada.expiryapp.data.db.dao.StockEntryDao
+import com.armada.expiryapp.data.db.dao.TeamLinkDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
+
+private val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `device_lock` (
+                `id`               INTEGER NOT NULL PRIMARY KEY,
+                `merchandiserName` TEXT NOT NULL,
+                `lockedAt`         TEXT NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `team_links` (
+                `id`               INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `merchandiserName` TEXT NOT NULL,
+                `salesmanName`     TEXT NOT NULL,
+                `outletCode`       TEXT NOT NULL,
+                `outletName`       TEXT NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_team_links_outletCode` " +
+            "ON `team_links`(`outletCode`)"
+        )
+    }
+}
 
 private val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -80,7 +107,7 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "armada_expiry.db")
             .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
@@ -95,4 +122,8 @@ object DatabaseModule {
     @Provides fun provideStockEntryDao(db: AppDatabase): StockEntryDao = db.stockEntryDao()
 
     @Provides fun provideOutletItemLinkDao(db: AppDatabase): OutletItemLinkDao = db.outletItemLinkDao()
+
+    @Provides fun provideDeviceLockDao(db: AppDatabase): DeviceLockDao = db.deviceLockDao()
+
+    @Provides fun provideTeamLinkDao(db: AppDatabase): TeamLinkDao = db.teamLinkDao()
 }

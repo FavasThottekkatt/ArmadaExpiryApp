@@ -18,6 +18,7 @@ import com.armada.expiryapp.ui.screens.entry.NewEntryViewModel
 import com.armada.expiryapp.ui.screens.history.HistoryScreen
 import com.armada.expiryapp.ui.screens.history.HistoryViewModel
 import com.armada.expiryapp.ui.screens.itemlinking.ItemLinkingScreen
+import com.armada.expiryapp.ui.screens.teamlinking.TeamLinkingScreen
 import com.armada.expiryapp.ui.screens.login.LoginScreen
 import com.armada.expiryapp.ui.screens.login.LoginViewModel
 import com.armada.expiryapp.ui.screens.reports.ReportsScreen
@@ -137,6 +138,10 @@ fun AppNavGraph(
         composable(Screen.History.route) {
             val viewModel: HistoryViewModel = hiltViewModel()
             HistoryScreen(viewModel = viewModel)
+        }
+
+        composable(Screen.TeamLinking.route) {
+            TeamLinkingScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.ItemLinking.route) {

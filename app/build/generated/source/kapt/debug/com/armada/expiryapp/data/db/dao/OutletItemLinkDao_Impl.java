@@ -70,26 +70,25 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
   }
 
   @Override
-  public Object insert(final OutletItemLink link, final Continuation<? super Long> $completion) {
+  public Object insert(final OutletItemLink link, final Continuation<? super Long> arg1) {
     if (link == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       return __insertAdapterOfOutletItemLink.insertAndReturnId(_connection, link);
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object insertAll(final List<OutletItemLink> links,
-      final Continuation<? super Unit> $completion) {
+  public Object insertAll(final List<OutletItemLink> links, final Continuation<? super Unit> arg1) {
     if (links == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       __insertAdapterOfOutletItemLink.insert(_connection, links);
       return Unit.INSTANCE;
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object getAllForOutlet(final String outletCode,
-      final Continuation<? super List<OutletItemLink>> $completion) {
+      final Continuation<? super List<OutletItemLink>> arg1) {
     final String _sql = "SELECT * FROM outlet_item_links WHERE outletCode = ? ORDER BY description ASC";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -141,12 +140,12 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object getCountForOutlet(final String outletCode,
-      final Continuation<? super Integer> $completion) {
+      final Continuation<? super Integer> arg1) {
     final String _sql = "SELECT COUNT(*) FROM outlet_item_links WHERE outletCode = ?";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -173,7 +172,7 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -209,7 +208,7 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
 
   @Override
   public Object searchForDropdown(final String outletCode, final String query,
-      final Continuation<? super List<OutletItemLink>> $completion) {
+      final Continuation<? super List<OutletItemLink>> arg2) {
     final String _sql = "\n"
             + "        SELECT * FROM outlet_item_links\n"
             + "        WHERE outletCode = ?\n"
@@ -280,12 +279,12 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg2);
   }
 
   @Override
   public Object isLinked(final String outletCode, final String barcode,
-      final Continuation<? super Boolean> $completion) {
+      final Continuation<? super Boolean> arg2) {
     final String _sql = "\n"
             + "        SELECT EXISTS(\n"
             + "            SELECT 1 FROM outlet_item_links\n"
@@ -323,12 +322,12 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg2);
   }
 
   @Override
   public Object deleteByOutletAndBarcode(final String outletCode, final String barcode,
-      final Continuation<? super Unit> $completion) {
+      final Continuation<? super Unit> arg2) {
     final String _sql = "DELETE FROM outlet_item_links WHERE outletCode = ? AND barcode = ?";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -350,12 +349,11 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg2);
   }
 
   @Override
-  public Object deleteAllForOutlet(final String outletCode,
-      final Continuation<? super Unit> $completion) {
+  public Object deleteAllForOutlet(final String outletCode, final Continuation<? super Unit> arg1) {
     final String _sql = "DELETE FROM outlet_item_links WHERE outletCode = ?";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -371,7 +369,7 @@ public final class OutletItemLinkDao_Impl implements OutletItemLinkDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @NonNull

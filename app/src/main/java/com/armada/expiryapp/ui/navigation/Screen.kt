@@ -11,4 +11,5 @@ sealed class Screen(val route: String) {
     data object Stock          : Screen("stock")
     data object History        : Screen("history")
     data object ItemLinking    : Screen("item_linking")
+    data object TeamLinking    : Screen("team_linking")
 }

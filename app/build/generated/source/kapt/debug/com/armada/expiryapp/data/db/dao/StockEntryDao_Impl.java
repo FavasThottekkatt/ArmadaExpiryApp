@@ -96,16 +96,16 @@ public final class StockEntryDao_Impl implements StockEntryDao {
   }
 
   @Override
-  public Object upsert(final StockEntry entry, final Continuation<? super Long> $completion) {
+  public Object upsert(final StockEntry entry, final Continuation<? super Long> arg1) {
     if (entry == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       return __insertAdapterOfStockEntry.insertAndReturnId(_connection, entry);
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object getActiveEntries(final String outletCode, final String merchandiser,
-      final String salesman, final Continuation<? super List<StockEntry>> $completion) {
+      final String salesman, final Continuation<? super List<StockEntry>> arg3) {
     final String _sql = "\n"
             + "        SELECT * FROM stock_entries\n"
             + "        WHERE outletCode   = ?\n"
@@ -224,11 +224,11 @@ public final class StockEntryDao_Impl implements StockEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg3);
   }
 
   @Override
-  public Object deleteById(final long id, final Continuation<? super Unit> $completion) {
+  public Object deleteById(final long id, final Continuation<? super Unit> arg1) {
     final String _sql = "DELETE FROM stock_entries WHERE id = ?";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -240,12 +240,12 @@ public final class StockEntryDao_Impl implements StockEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object deleteAllForSession(final String outletCode, final String merchandiser,
-      final String salesman, final Continuation<? super Unit> $completion) {
+      final String salesman, final Continuation<? super Unit> arg3) {
     final String _sql = "\n"
             + "        DELETE FROM stock_entries\n"
             + "        WHERE outletCode   = ?\n"
@@ -279,12 +279,11 @@ public final class StockEntryDao_Impl implements StockEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg3);
   }
 
   @Override
-  public Object archiveForOutlet(final String outletCode,
-      final Continuation<? super Unit> $completion) {
+  public Object archiveForOutlet(final String outletCode, final Continuation<? super Unit> arg1) {
     final String _sql = "\n"
             + "        UPDATE stock_entries SET archived = 1\n"
             + "        WHERE outletCode = ? AND archived = 0\n"
@@ -303,7 +302,7 @@ public final class StockEntryDao_Impl implements StockEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @NonNull

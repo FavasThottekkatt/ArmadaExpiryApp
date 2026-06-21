@@ -2,7 +2,9 @@ package com.armada.expiryapp.ui.screens.settings;
 
 import android.content.Context;
 import com.armada.expiryapp.data.repository.CsvMetadataRepository;
+import com.armada.expiryapp.data.repository.DeviceLockRepository;
 import com.armada.expiryapp.data.repository.OutletItemLinkRepository;
+import com.armada.expiryapp.data.repository.TeamLinkRepository;
 import com.armada.expiryapp.data.session.SessionHolder;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -34,31 +36,42 @@ public final class SettingsViewModel_Factory implements Factory<SettingsViewMode
 
   private final Provider<OutletItemLinkRepository> linkRepositoryProvider;
 
+  private final Provider<DeviceLockRepository> deviceLockRepositoryProvider;
+
+  private final Provider<TeamLinkRepository> teamLinkRepositoryProvider;
+
   public SettingsViewModel_Factory(Provider<Context> contextProvider,
       Provider<CsvMetadataRepository> csvMetadataRepositoryProvider,
       Provider<SessionHolder> sessionHolderProvider,
-      Provider<OutletItemLinkRepository> linkRepositoryProvider) {
+      Provider<OutletItemLinkRepository> linkRepositoryProvider,
+      Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider) {
     this.contextProvider = contextProvider;
     this.csvMetadataRepositoryProvider = csvMetadataRepositoryProvider;
     this.sessionHolderProvider = sessionHolderProvider;
     this.linkRepositoryProvider = linkRepositoryProvider;
+    this.deviceLockRepositoryProvider = deviceLockRepositoryProvider;
+    this.teamLinkRepositoryProvider = teamLinkRepositoryProvider;
   }
 
   @Override
   public SettingsViewModel get() {
-    return newInstance(contextProvider.get(), csvMetadataRepositoryProvider.get(), sessionHolderProvider.get(), linkRepositoryProvider.get());
+    return newInstance(contextProvider.get(), csvMetadataRepositoryProvider.get(), sessionHolderProvider.get(), linkRepositoryProvider.get(), deviceLockRepositoryProvider.get(), teamLinkRepositoryProvider.get());
   }
 
   public static SettingsViewModel_Factory create(Provider<Context> contextProvider,
       Provider<CsvMetadataRepository> csvMetadataRepositoryProvider,
       Provider<SessionHolder> sessionHolderProvider,
-      Provider<OutletItemLinkRepository> linkRepositoryProvider) {
-    return new SettingsViewModel_Factory(contextProvider, csvMetadataRepositoryProvider, sessionHolderProvider, linkRepositoryProvider);
+      Provider<OutletItemLinkRepository> linkRepositoryProvider,
+      Provider<DeviceLockRepository> deviceLockRepositoryProvider,
+      Provider<TeamLinkRepository> teamLinkRepositoryProvider) {
+    return new SettingsViewModel_Factory(contextProvider, csvMetadataRepositoryProvider, sessionHolderProvider, linkRepositoryProvider, deviceLockRepositoryProvider, teamLinkRepositoryProvider);
   }
 
   public static SettingsViewModel newInstance(Context context,
       CsvMetadataRepository csvMetadataRepository, SessionHolder sessionHolder,
-      OutletItemLinkRepository linkRepository) {
-    return new SettingsViewModel(context, csvMetadataRepository, sessionHolder, linkRepository);
+      OutletItemLinkRepository linkRepository, DeviceLockRepository deviceLockRepository,
+      TeamLinkRepository teamLinkRepository) {
+    return new SettingsViewModel(context, csvMetadataRepository, sessionHolder, linkRepository, deviceLockRepository, teamLinkRepository);
   }
 }

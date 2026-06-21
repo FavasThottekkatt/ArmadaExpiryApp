@@ -191,29 +191,29 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
   }
 
   @Override
-  public Object insert(final ExpiryEntry entry, final Continuation<? super Long> $completion) {
+  public Object insert(final ExpiryEntry entry, final Continuation<? super Long> arg1) {
     if (entry == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       return __insertAdapterOfExpiryEntry.insertAndReturnId(_connection, entry);
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object delete(final ExpiryEntry entry, final Continuation<? super Unit> $completion) {
+  public Object delete(final ExpiryEntry entry, final Continuation<? super Unit> arg1) {
     if (entry == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       __deleteAdapterOfExpiryEntry.handle(_connection, entry);
       return Unit.INSTANCE;
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object update(final ExpiryEntry entry, final Continuation<? super Unit> $completion) {
+  public Object update(final ExpiryEntry entry, final Continuation<? super Unit> arg1) {
     if (entry == null) throw new NullPointerException();
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       __updateAdapterOfExpiryEntry.handle(_connection, entry);
       return Unit.INSTANCE;
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -664,7 +664,7 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
 
   @Override
   public Object getExpiredCount(final String outletCode, final String today,
-      final Continuation<? super Integer> $completion) {
+      final Continuation<? super Integer> arg2) {
     final String _sql = "\n"
             + "        SELECT COUNT(*) FROM expiry_entries\n"
             + "        WHERE outletCode = ? AND archived = 0 AND expiryDate < ?\n"
@@ -700,12 +700,12 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg2);
   }
 
   @Override
   public Object getWithin30Count(final String outletCode, final String today, final String d30,
-      final Continuation<? super Integer> $completion) {
+      final Continuation<? super Integer> arg3) {
     final String _sql = "\n"
             + "        SELECT COUNT(*) FROM expiry_entries\n"
             + "        WHERE outletCode = ? AND archived = 0\n"
@@ -748,11 +748,11 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg3);
   }
 
   @Override
-  public Object findById(final long id, final Continuation<? super ExpiryEntry> $completion) {
+  public Object findById(final long id, final Continuation<? super ExpiryEntry> arg1) {
     final String _sql = "SELECT * FROM expiry_entries WHERE id = ? LIMIT 1";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -850,13 +850,13 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object findDuplicate(final String barcode, final String outletCode,
       final String expiryDate, final String merchandiser,
-      final Continuation<? super ExpiryEntry> $completion) {
+      final Continuation<? super ExpiryEntry> arg4) {
     final String _sql = "\n"
             + "        SELECT * FROM expiry_entries\n"
             + "        WHERE barcode      = ?\n"
@@ -984,7 +984,7 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg4);
   }
 
   @Override
@@ -1113,7 +1113,7 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
 
   @Override
   public Object getArchivedEntries(final String outletCode,
-      final Continuation<? super List<ExpiryEntry>> $completion) {
+      final Continuation<? super List<ExpiryEntry>> arg1) {
     final String _sql = "\n"
             + "        SELECT * FROM expiry_entries\n"
             + "        WHERE outletCode = ? AND archived = 1\n"
@@ -1219,7 +1219,7 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
@@ -1256,7 +1256,7 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
   @Override
   public Object getEntriesForExport(final String outletCode, final String merchandiser,
       final String salesman, final String monthPrefix,
-      final Continuation<? super List<ExpiryEntry>> $completion) {
+      final Continuation<? super List<ExpiryEntry>> arg4) {
     final String _sql = "\n"
             + "        SELECT * FROM expiry_entries\n"
             + "        WHERE outletCode   = ?\n"
@@ -1384,12 +1384,12 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg4);
   }
 
   @Override
   public Object getAllEntriesForMerchandiserMonth(final String merchandiser, final String salesman,
-      final String monthPrefix, final Continuation<? super List<ExpiryEntry>> $completion) {
+      final String monthPrefix, final Continuation<? super List<ExpiryEntry>> arg3) {
     final String _sql = "\n"
             + "        SELECT * FROM expiry_entries\n"
             + "        WHERE merchandiser = ?\n"
@@ -1510,11 +1510,11 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg3);
   }
 
   @Override
-  public Object getLastActiveEntry(final Continuation<? super ExpiryEntry> $completion) {
+  public Object getLastActiveEntry(final Continuation<? super ExpiryEntry> arg0) {
     final String _sql = "SELECT * FROM expiry_entries WHERE archived = 0 ORDER BY entryTimestamp DESC LIMIT 1";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -1610,12 +1610,12 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override
   public Object getActiveCountForOutlet(final String outletCode,
-      final Continuation<? super Integer> $completion) {
+      final Continuation<? super Integer> arg1) {
     final String _sql = "SELECT COUNT(*) FROM expiry_entries WHERE archived = 0 AND outletCode = ?";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -1642,11 +1642,11 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object getTotalActiveCount(final Continuation<? super Integer> $completion) {
+  public Object getTotalActiveCount(final Continuation<? super Integer> arg0) {
     final String _sql = "SELECT COUNT(*) FROM expiry_entries WHERE archived = 0";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -1667,12 +1667,12 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @Override
   public Object getRecentEntries(final int limit,
-      final Continuation<? super List<ExpiryEntry>> $completion) {
+      final Continuation<? super List<ExpiryEntry>> arg1) {
     final String _sql = "SELECT * FROM expiry_entries ORDER BY entryTimestamp DESC LIMIT ?";
     return DBUtil.performSuspending(__db, true, false, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -1770,11 +1770,11 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
-  public Object deleteById(final long id, final Continuation<? super Unit> $completion) {
+  public Object deleteById(final long id, final Continuation<? super Unit> arg1) {
     final String _sql = "DELETE FROM expiry_entries WHERE id = ?";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -1786,12 +1786,12 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg1);
   }
 
   @Override
   public Object incrementQuantity(final long id, final int additionalQty,
-      final Continuation<? super Unit> $completion) {
+      final Continuation<? super Unit> arg2) {
     final String _sql = "UPDATE expiry_entries SET quantity = quantity + ? WHERE id = ?";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -1805,12 +1805,12 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg2);
   }
 
   @Override
   public Object archiveForOutletMonth(final String outletCode, final String monthPrefix,
-      final Continuation<? super Unit> $completion) {
+      final Continuation<? super Unit> arg2) {
     final String _sql = "\n"
             + "        UPDATE expiry_entries SET archived = 1\n"
             + "        WHERE outletCode = ? AND archived = 0\n"
@@ -1836,11 +1836,11 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg2);
   }
 
   @Override
-  public Object archiveAllActive(final Continuation<? super Unit> $completion) {
+  public Object archiveAllActive(final Continuation<? super Unit> arg0) {
     final String _sql = "UPDATE expiry_entries SET archived = 1 WHERE archived = 0";
     return DBUtil.performSuspending(__db, false, true, (_connection) -> {
       final SQLiteStatement _stmt = _connection.prepare(_sql);
@@ -1850,7 +1850,7 @@ public final class ExpiryEntryDao_Impl implements ExpiryEntryDao {
       } finally {
         _stmt.close();
       }
-    }, $completion);
+    }, arg0);
   }
 
   @NonNull

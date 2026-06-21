@@ -11,6 +11,8 @@ import androidx.sqlite.SQLite;
 import androidx.sqlite.SQLiteConnection;
 import com.armada.expiryapp.data.db.dao.CsvMetadataDao;
 import com.armada.expiryapp.data.db.dao.CsvMetadataDao_Impl;
+import com.armada.expiryapp.data.db.dao.DeviceLockDao;
+import com.armada.expiryapp.data.db.dao.DeviceLockDao_Impl;
 import com.armada.expiryapp.data.db.dao.ExpiryEntryDao;
 import com.armada.expiryapp.data.db.dao.ExpiryEntryDao_Impl;
 import com.armada.expiryapp.data.db.dao.ItemDao;
@@ -21,6 +23,8 @@ import com.armada.expiryapp.data.db.dao.OutletItemLinkDao;
 import com.armada.expiryapp.data.db.dao.OutletItemLinkDao_Impl;
 import com.armada.expiryapp.data.db.dao.StockEntryDao;
 import com.armada.expiryapp.data.db.dao.StockEntryDao_Impl;
+import com.armada.expiryapp.data.db.dao.TeamLinkDao;
+import com.armada.expiryapp.data.db.dao.TeamLinkDao_Impl;
 import java.lang.Class;
 import java.lang.Override;
 import java.lang.String;
@@ -49,10 +53,14 @@ public final class AppDatabase_Impl extends AppDatabase {
 
   private volatile OutletItemLinkDao _outletItemLinkDao;
 
+  private volatile DeviceLockDao _deviceLockDao;
+
+  private volatile TeamLinkDao _teamLinkDao;
+
   @Override
   @NonNull
   protected RoomOpenDelegate createOpenDelegate() {
-    final RoomOpenDelegate _openDelegate = new RoomOpenDelegate(4, "f817c9dbeec9121ae416f73a8111d26f", "370c01c3f34b4f0db46f12338b369a3e") {
+    final RoomOpenDelegate _openDelegate = new RoomOpenDelegate(5, "b2bef08f9bc8506b85fc4709454b4241", "1ad32a1f5a8c04a80c86f421b14da530") {
       @Override
       public void createAllTables(@NonNull final SQLiteConnection connection) {
         SQLite.execSQL(connection, "CREATE TABLE IF NOT EXISTS `items` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `barcode` TEXT NOT NULL, `description` TEXT NOT NULL, `productCode` TEXT)");
@@ -72,8 +80,11 @@ public final class AppDatabase_Impl extends AppDatabase {
         SQLite.execSQL(connection, "CREATE TABLE IF NOT EXISTS `outlet_item_links` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `outletCode` TEXT NOT NULL, `barcode` TEXT NOT NULL, `description` TEXT NOT NULL, `productCode` TEXT)");
         SQLite.execSQL(connection, "CREATE INDEX IF NOT EXISTS `index_outlet_item_links_outletCode` ON `outlet_item_links` (`outletCode`)");
         SQLite.execSQL(connection, "CREATE INDEX IF NOT EXISTS `index_outlet_item_links_barcode` ON `outlet_item_links` (`barcode`)");
+        SQLite.execSQL(connection, "CREATE TABLE IF NOT EXISTS `device_lock` (`id` INTEGER NOT NULL, `merchandiserName` TEXT NOT NULL, `lockedAt` TEXT NOT NULL, PRIMARY KEY(`id`))");
+        SQLite.execSQL(connection, "CREATE TABLE IF NOT EXISTS `team_links` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `merchandiserName` TEXT NOT NULL, `salesmanName` TEXT NOT NULL, `outletCode` TEXT NOT NULL, `outletName` TEXT NOT NULL)");
+        SQLite.execSQL(connection, "CREATE INDEX IF NOT EXISTS `index_team_links_outletCode` ON `team_links` (`outletCode`)");
         SQLite.execSQL(connection, "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        SQLite.execSQL(connection, "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f817c9dbeec9121ae416f73a8111d26f')");
+        SQLite.execSQL(connection, "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b2bef08f9bc8506b85fc4709454b4241')");
       }
 
       @Override
@@ -84,6 +95,8 @@ public final class AppDatabase_Impl extends AppDatabase {
         SQLite.execSQL(connection, "DROP TABLE IF EXISTS `csv_metadata`");
         SQLite.execSQL(connection, "DROP TABLE IF EXISTS `stock_entries`");
         SQLite.execSQL(connection, "DROP TABLE IF EXISTS `outlet_item_links`");
+        SQLite.execSQL(connection, "DROP TABLE IF EXISTS `device_lock`");
+        SQLite.execSQL(connection, "DROP TABLE IF EXISTS `team_links`");
       }
 
       @Override
@@ -223,6 +236,35 @@ public final class AppDatabase_Impl extends AppDatabase {
                   + " Expected:\n" + _infoOutletItemLinks + "\n"
                   + " Found:\n" + _existingOutletItemLinks);
         }
+        final Map<String, TableInfo.Column> _columnsDeviceLock = new HashMap<String, TableInfo.Column>(3);
+        _columnsDeviceLock.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsDeviceLock.put("merchandiserName", new TableInfo.Column("merchandiserName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsDeviceLock.put("lockedAt", new TableInfo.Column("lockedAt", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final Set<TableInfo.ForeignKey> _foreignKeysDeviceLock = new HashSet<TableInfo.ForeignKey>(0);
+        final Set<TableInfo.Index> _indicesDeviceLock = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoDeviceLock = new TableInfo("device_lock", _columnsDeviceLock, _foreignKeysDeviceLock, _indicesDeviceLock);
+        final TableInfo _existingDeviceLock = TableInfo.read(connection, "device_lock");
+        if (!_infoDeviceLock.equals(_existingDeviceLock)) {
+          return new RoomOpenDelegate.ValidationResult(false, "device_lock(com.armada.expiryapp.data.db.entity.DeviceLock).\n"
+                  + " Expected:\n" + _infoDeviceLock + "\n"
+                  + " Found:\n" + _existingDeviceLock);
+        }
+        final Map<String, TableInfo.Column> _columnsTeamLinks = new HashMap<String, TableInfo.Column>(5);
+        _columnsTeamLinks.put("id", new TableInfo.Column("id", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTeamLinks.put("merchandiserName", new TableInfo.Column("merchandiserName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTeamLinks.put("salesmanName", new TableInfo.Column("salesmanName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTeamLinks.put("outletCode", new TableInfo.Column("outletCode", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsTeamLinks.put("outletName", new TableInfo.Column("outletName", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final Set<TableInfo.ForeignKey> _foreignKeysTeamLinks = new HashSet<TableInfo.ForeignKey>(0);
+        final Set<TableInfo.Index> _indicesTeamLinks = new HashSet<TableInfo.Index>(1);
+        _indicesTeamLinks.add(new TableInfo.Index("index_team_links_outletCode", false, Arrays.asList("outletCode"), Arrays.asList("ASC")));
+        final TableInfo _infoTeamLinks = new TableInfo("team_links", _columnsTeamLinks, _foreignKeysTeamLinks, _indicesTeamLinks);
+        final TableInfo _existingTeamLinks = TableInfo.read(connection, "team_links");
+        if (!_infoTeamLinks.equals(_existingTeamLinks)) {
+          return new RoomOpenDelegate.ValidationResult(false, "team_links(com.armada.expiryapp.data.db.entity.TeamLink).\n"
+                  + " Expected:\n" + _infoTeamLinks + "\n"
+                  + " Found:\n" + _existingTeamLinks);
+        }
         return new RoomOpenDelegate.ValidationResult(true, null);
       }
     };
@@ -234,12 +276,12 @@ public final class AppDatabase_Impl extends AppDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final Map<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final Map<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "items", "outlets", "expiry_entries", "csv_metadata", "stock_entries", "outlet_item_links");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "items", "outlets", "expiry_entries", "csv_metadata", "stock_entries", "outlet_item_links", "device_lock", "team_links");
   }
 
   @Override
   public void clearAllTables() {
-    super.performClear(false, "items", "outlets", "expiry_entries", "csv_metadata", "stock_entries", "outlet_item_links");
+    super.performClear(false, "items", "outlets", "expiry_entries", "csv_metadata", "stock_entries", "outlet_item_links", "device_lock", "team_links");
   }
 
   @Override
@@ -252,6 +294,8 @@ public final class AppDatabase_Impl extends AppDatabase {
     _typeConvertersMap.put(CsvMetadataDao.class, CsvMetadataDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(StockEntryDao.class, StockEntryDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(OutletItemLinkDao.class, OutletItemLinkDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(DeviceLockDao.class, DeviceLockDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(TeamLinkDao.class, TeamLinkDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -350,6 +394,34 @@ public final class AppDatabase_Impl extends AppDatabase {
           _outletItemLinkDao = new OutletItemLinkDao_Impl(this);
         }
         return _outletItemLinkDao;
+      }
+    }
+  }
+
+  @Override
+  public DeviceLockDao deviceLockDao() {
+    if (_deviceLockDao != null) {
+      return _deviceLockDao;
+    } else {
+      synchronized(this) {
+        if(_deviceLockDao == null) {
+          _deviceLockDao = new DeviceLockDao_Impl(this);
+        }
+        return _deviceLockDao;
+      }
+    }
+  }
+
+  @Override
+  public TeamLinkDao teamLinkDao() {
+    if (_teamLinkDao != null) {
+      return _teamLinkDao;
+    } else {
+      synchronized(this) {
+        if(_teamLinkDao == null) {
+          _teamLinkDao = new TeamLinkDao_Impl(this);
+        }
+        return _teamLinkDao;
       }
     }
   }
