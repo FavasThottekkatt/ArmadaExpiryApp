@@ -26,6 +26,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -202,10 +203,13 @@ fun ItemLinkingScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedButton(
-                        onClick  = viewModel::linkAllShown,
+                        onClick  = viewModel::linkSelected,
                         modifier = Modifier.weight(1f),
+                        colors   = ButtonDefaults.outlinedButtonColors(
+                            contentColor = ArmadaColors.BrandAccent,
+                        ),
                     ) {
-                        Text("Link All Shown", fontSize = 12.sp)
+                        Text("Link Selected", fontSize = 12.sp)
                     }
                     OutlinedButton(
                         onClick  = viewModel::requestClearAll,

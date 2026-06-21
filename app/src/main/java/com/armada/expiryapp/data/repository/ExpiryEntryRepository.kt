@@ -85,11 +85,9 @@ class ExpiryEntryRepository @Inject constructor(private val dao: ExpiryEntryDao)
     // ── Excel export ──────────────────────────────────────────────────────────
 
     suspend fun getEntriesForExport(
-        outletCode: String,
-        merchandiser: String,
-        salesman: String,
-        monthPrefix: String
-    ): List<ExpiryEntry> = dao.getEntriesForExport(outletCode, merchandiser, salesman, monthPrefix)
+        outletCode:  String,
+        monthPrefix: String,
+    ): List<ExpiryEntry> = dao.getEntriesForExport(outletCode, monthPrefix)
 
     suspend fun getAllEntriesForMerchandiserMonth(
         merchandiser: String,

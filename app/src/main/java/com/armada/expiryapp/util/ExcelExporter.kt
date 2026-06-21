@@ -107,7 +107,7 @@ class ExcelExporter(private val context: Context) {
 
     @Throws(Exception::class, OutOfMemoryError::class)
     fun buildMultiOutletFile(
-        outletEntries: List<Pair<Outlet, List<ExpiryEntry>>>,
+        outletEntries: List<Triple<Outlet, String, List<ExpiryEntry>>>,
         merchandiser:  String,
     ): File {
         val monthYear = LocalDate.now()
@@ -127,16 +127,14 @@ class ExcelExporter(private val context: Context) {
                 XSSFWorkbook()
             }
 
-            outletEntries.forEach { (outlet, entries) ->
+            outletEntries.forEach { (outlet, salesmanName, entries) ->
                 val sheetName = outlet.shortName.ifBlank { outlet.outletName }.take(31)
 
                 val existingIdx = workbook.getSheetIndex(sheetName)
                 if (existingIdx >= 0) workbook.removeSheetAt(existingIdx)
                 val sheet: XSSFSheet = workbook.createSheet(sheetName)
 
-                val salesman = entries.firstOrNull()?.salesman ?: ""
-
-                writeCell(sheet.createRow(0), 0, "SALESMAN :")    ; writeCell(sheet.getRow(0), 1, salesman)
+                writeCell(sheet.createRow(0), 0, "SALESMAN :")    ; writeCell(sheet.getRow(0), 1, salesmanName)
                 writeCell(sheet.createRow(1), 0, "MERCHANDISER :"); writeCell(sheet.getRow(1), 1, merchandiser)
                 writeCell(sheet.createRow(2), 0, "OUTLET NAME :") ; writeCell(sheet.getRow(2), 1, outlet.outletName)
                 writeCell(sheet.createRow(3), 0, "CODE :")         ; writeCell(sheet.getRow(3), 1, outlet.outletCode)

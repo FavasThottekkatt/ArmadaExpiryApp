@@ -5,7 +5,6 @@ package com.armada.expiryapp.ui.screens.reports
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,11 +20,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -35,12 +32,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -74,11 +68,8 @@ fun ReportsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val selectedOutlet   by viewModel.selectedOutlet.collectAsState()
-    val outletQuery      by viewModel.outletQuery.collectAsState()
-    val outletResults    by viewModel.outletResults.collectAsState()
     val summaryData      by viewModel.summaryData.collectAsState()
     val isExportingExcel by viewModel.isExportingExcel.collectAsState()
-    val showTextDialog   by viewModel.showTextScopeDialog.collectAsState()
     val pastExports      by viewModel.pastExports.collectAsState()
     val reportEntries    = viewModel.reportEntries.collectAsLazyPagingItems()
 
@@ -123,25 +114,6 @@ fun ReportsScreen(
         }
     }
 
-    // Text report scope dialog
-    if (showTextDialog) {
-        AlertDialog(
-            onDismissRequest = viewModel::dismissTextScopeDialog,
-            title = { Text("Share Text Report", color = ArmadaColors.BrandTitle) },
-            text  = { Text("Share entries for this outlet only, or all outlets visited this month?") },
-            confirmButton = {
-                TextButton(onClick = viewModel::shareTextAllOutlets) {
-                    Text("All Outlets")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::shareTextThisOutlet) {
-                    Text("This Outlet Only")
-                }
-            },
-        )
-    }
-
     Box(modifier = Modifier.fillMaxSize().background(ArmadaColors.BgApp)) {
 
         LazyColumn(
@@ -150,16 +122,29 @@ fun ReportsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
 
-            // ── Outlet selector ───────────────────────────────────────────────
+            // ── Outlet label (auto-selected from session) ─────────────────────
             item {
-                OutletSelector(
-                    query          = outletQuery,
-                    results        = outletResults,
-                    hasSelection   = selectedOutlet != null,
-                    onQueryChange  = viewModel::setOutletQuery,
-                    onSelect       = viewModel::selectOutlet,
-                    onClear        = viewModel::clearOutletSelection,
-                )
+                if (selectedOutlet != null) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors   = CardDefaults.cardColors(containerColor = ArmadaColors.BgHeader),
+                        shape    = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(
+                            text       = selectedOutlet!!.outletName,
+                            color      = ArmadaColors.TextOnDark,
+                            fontWeight = FontWeight.Bold,
+                            fontSize   = 16.sp,
+                            modifier   = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        )
+                    }
+                } else {
+                    Text(
+                        text     = "Please select an outlet from Dashboard first.",
+                        color    = ArmadaColors.TextSecondary,
+                        modifier = Modifier.padding(vertical = 16.dp),
+                    )
+                }
             }
 
             // ── Summary card ──────────────────────────────────────────────────
@@ -278,65 +263,6 @@ fun ReportsScreen(
             hostState = snackbarHostState,
             modifier  = Modifier.align(Alignment.BottomCenter),
         )
-    }
-}
-
-// ── Outlet selector ───────────────────────────────────────────────────────────
-
-@Composable
-private fun OutletSelector(
-    query:         String,
-    results:       List<com.armada.expiryapp.data.db.entity.Outlet>,
-    hasSelection:  Boolean,
-    onQueryChange: (String) -> Unit,
-    onSelect:      (com.armada.expiryapp.data.db.entity.Outlet) -> Unit,
-    onClear:       () -> Unit,
-) {
-    Column {
-        OutlinedTextField(
-            value           = query,
-            onValueChange   = { if (!hasSelection) onQueryChange(it) },
-            label           = { Text("Search outlet") },
-            placeholder     = { Text("Type outlet name…") },
-            singleLine      = true,
-            readOnly        = hasSelection,
-            modifier        = Modifier.fillMaxWidth(),
-            trailingIcon    = {
-                if (hasSelection) {
-                    IconButton(onClick = onClear) {
-                        Icon(Icons.Filled.Close, contentDescription = "Clear selection")
-                    }
-                }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor   = ArmadaColors.BrandAccent,
-                unfocusedBorderColor = ArmadaColors.Border,
-                focusedLabelColor    = ArmadaColors.BrandAccent,
-            ),
-        )
-
-        if (results.isNotEmpty() && !hasSelection) {
-            Card(
-                modifier  = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors    = CardDefaults.cardColors(containerColor = ArmadaColors.BgCard),
-                shape     = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
-            ) {
-                Column {
-                    results.take(5).forEach { outlet ->
-                        Text(
-                            text     = outlet.outletName,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelect(outlet) }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            color    = ArmadaColors.TextPrimary,
-                        )
-                        HorizontalDivider(color = ArmadaColors.Border, thickness = 0.5.dp)
-                    }
-                }
-            }
-        }
     }
 }
 

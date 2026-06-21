@@ -10,7 +10,6 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.armada.expiryapp.data.db.entity.ExpiryEntry
 import com.armada.expiryapp.data.db.entity.Outlet
-import com.armada.expiryapp.data.db.entity.TeamLink
 import com.armada.expiryapp.data.repository.DeviceLockRepository
 import com.armada.expiryapp.data.repository.ExpiryEntryRepository
 import com.armada.expiryapp.data.repository.TeamLinkRepository
@@ -63,20 +62,10 @@ class ReportsViewModel @Inject constructor(
         _snackMessage.tryEmit("Error: ${t.localizedMessage ?: "Unknown"}")
     }
 
-    // ── Linked outlets (loaded once from TeamLink for this device) ────────────
-
-    private val _linkedOutlets = MutableStateFlow<List<TeamLink>>(emptyList())
-
     // ── Outlet selection ──────────────────────────────────────────────────────
 
     private val _selectedOutlet = MutableStateFlow<Outlet?>(null)
     val selectedOutlet: StateFlow<Outlet?> = _selectedOutlet.asStateFlow()
-
-    private val _outletQuery = MutableStateFlow("")
-    val outletQuery: StateFlow<String> = _outletQuery.asStateFlow()
-
-    private val _outletResults = MutableStateFlow<List<Outlet>>(emptyList())
-    val outletResults: StateFlow<List<Outlet>> = _outletResults.asStateFlow()
 
     // ── Summary ───────────────────────────────────────────────────────────────
 
@@ -93,9 +82,6 @@ class ReportsViewModel @Inject constructor(
 
     private val _shareText = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val shareText: SharedFlow<String> = _shareText.asSharedFlow()
-
-    private val _showTextScopeDialog = MutableStateFlow(false)
-    val showTextScopeDialog: StateFlow<Boolean> = _showTextScopeDialog.asStateFlow()
 
     // ── Paging entries ────────────────────────────────────────────────────────
 
@@ -126,8 +112,6 @@ class ReportsViewModel @Inject constructor(
             val lock = deviceLockRepository.get()
             if (lock != null) {
                 val links = teamLinkRepository.getAllForMerchandiser(lock.merchandiserName)
-                _linkedOutlets.value = links
-                // Auto-select from active session if outlet is in linked list
                 val sessionCode = sessionHolder.outletCode
                 if (sessionCode.isNotBlank()) {
                     val link = links.find { it.outletCode == sessionCode }
@@ -135,44 +119,12 @@ class ReportsViewModel @Inject constructor(
                         val outlet = Outlet(outletCode = link.outletCode,
                                             outletName = link.outletName, shortName = "")
                         _selectedOutlet.value = outlet
-                        _outletQuery.value    = outlet.outletName
                         loadSummary(outlet)
                     }
                 }
             }
         }
         loadPastExports()
-    }
-
-    // ── Outlet selection ──────────────────────────────────────────────────────
-
-    fun setOutletQuery(query: String) {
-        _outletQuery.value = query
-        if (_selectedOutlet.value != null) return
-        viewModelScope.launch(Dispatchers.IO + handler) {
-            val links = _linkedOutlets.value
-            _outletResults.value = if (query.isBlank()) {
-                links.map { Outlet(outletCode = it.outletCode, outletName = it.outletName, shortName = "") }
-            } else {
-                links
-                    .filter { it.outletName.contains(query, ignoreCase = true) }
-                    .map { Outlet(outletCode = it.outletCode, outletName = it.outletName, shortName = "") }
-            }
-        }
-    }
-
-    fun selectOutlet(outlet: Outlet) {
-        _selectedOutlet.value = outlet
-        _outletQuery.value    = outlet.outletName
-        _outletResults.value  = emptyList()
-        viewModelScope.launch(Dispatchers.IO + handler) { loadSummary(outlet) }
-    }
-
-    fun clearOutletSelection() {
-        _selectedOutlet.value = null
-        _outletQuery.value    = ""
-        _outletResults.value  = emptyList()
-        _summaryData.value    = null
     }
 
     private suspend fun loadSummary(outlet: Outlet) {
@@ -212,17 +164,19 @@ class ReportsViewModel @Inject constructor(
                     return@launch
                 }
                 val monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
-                val outletEntries = mutableListOf<Pair<Outlet, List<ExpiryEntry>>>()
+                val outletEntries = mutableListOf<Triple<Outlet, String, List<ExpiryEntry>>>()
                 links.forEach { link ->
                     val entries = entryRepository.getEntriesForExport(
-                        outletCode   = link.outletCode,
-                        merchandiser = lock.merchandiserName,
-                        salesman     = link.salesmanName,
-                        monthPrefix  = monthPrefix,
+                        outletCode  = link.outletCode,
+                        monthPrefix = monthPrefix,
                     )
                     outletEntries.add(
-                        Outlet(outletCode = link.outletCode, outletName = link.outletName,
-                               shortName  = link.outletName.take(31)) to entries
+                        Triple(
+                            Outlet(outletCode = link.outletCode, outletName = link.outletName,
+                                   shortName  = link.outletName.take(31)),
+                            link.salesmanName,
+                            entries,
+                        )
                     )
                 }
                 val file = ExcelExporter(context).buildMultiOutletFile(
@@ -246,54 +200,21 @@ class ReportsViewModel @Inject constructor(
 
     fun requestTextReport() {
         if (_selectedOutlet.value == null) {
-            _snackMessage.tryEmit("Please select an outlet first.")
+            _snackMessage.tryEmit("Please select an outlet from Dashboard first.")
             return
         }
-        _showTextScopeDialog.value = true
+        shareTextThisOutlet()
     }
 
-    fun dismissTextScopeDialog() { _showTextScopeDialog.value = false }
-
     fun shareTextThisOutlet() {
-        _showTextScopeDialog.value = false
         val outlet = _selectedOutlet.value ?: return
         viewModelScope.launch(Dispatchers.IO + handler) {
             val monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
             val entries = entryRepository.getEntriesForExport(
-                outlet.outletCode, sessionHolder.merchandiser, sessionHolder.salesman, monthPrefix,
+                outletCode  = outlet.outletCode,
+                monthPrefix = monthPrefix,
             )
             _shareText.tryEmit(buildTextReport(listOf(outlet.outletName to entries)))
-        }
-    }
-
-    fun shareTextAllOutlets() {
-        _showTextScopeDialog.value = false
-        viewModelScope.launch(Dispatchers.IO + handler) {
-            val lock = deviceLockRepository.get() ?: run {
-                _snackMessage.tryEmit("Merchandiser not set. Complete Team Linking first.")
-                return@launch
-            }
-            val links = teamLinkRepository.getAllForMerchandiser(lock.merchandiserName)
-            if (links.isEmpty()) {
-                _snackMessage.tryEmit("No outlets linked. Complete Team Linking first.")
-                return@launch
-            }
-            val monthPrefix = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM"))
-            val sections = mutableListOf<Pair<String, List<ExpiryEntry>>>()
-            links.forEach { link ->
-                val entries = entryRepository.getEntriesForExport(
-                    outletCode   = link.outletCode,
-                    merchandiser = lock.merchandiserName,
-                    salesman     = link.salesmanName,
-                    monthPrefix  = monthPrefix,
-                )
-                if (entries.isNotEmpty()) sections.add(link.outletName to entries)
-            }
-            if (sections.isEmpty()) {
-                _snackMessage.tryEmit("No entries found for any linked outlet this month.")
-                return@launch
-            }
-            _shareText.tryEmit(buildTextReport(sections))
         }
     }
 

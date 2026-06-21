@@ -132,29 +132,15 @@ class ItemLinkingViewModel @Inject constructor(
         }
     }
 
-    fun linkAllShown() {
+    fun linkSelected() {
         val outletCode = _selectedOutletCode.value
+        val outletName = _selectedOutletName.value
         if (outletCode.isBlank()) return
-        val query = _searchQuery.value
-        viewModelScope.launch(Dispatchers.IO + handler) {
-            val allMatching = if (query.isBlank()) itemRepository.getAll()
-                              else itemRepository.searchAll(query)
-            val toLink = allMatching.filter { it.barcode !in _linkedBarcodes.value }
-            if (toLink.isEmpty()) {
-                _snackMessage.tryEmit("All shown items are already linked.")
-                return@launch
-            }
-            val newLinks = toLink.map {
-                OutletItemLink(
-                    outletCode  = outletCode,
-                    barcode     = it.barcode,
-                    description = it.description,
-                    productCode = it.productCode,
-                )
-            }
-            linkRepository.insertAll(newLinks)
-            _linkedBarcodes.update { current -> current + toLink.map { it.barcode }.toSet() }
-            _snackMessage.tryEmit("Linked ${toLink.size} item(s).")
+        val count = _linkedBarcodes.value.size
+        if (count == 0) {
+            _snackMessage.tryEmit("Please select items first by tapping them.")
+        } else {
+            _snackMessage.tryEmit("$count items linked to $outletName.")
         }
     }
 

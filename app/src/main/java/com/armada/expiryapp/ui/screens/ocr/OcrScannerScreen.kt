@@ -38,7 +38,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +64,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.armada.expiryapp.ui.theme.ArmadaColors
@@ -88,7 +88,7 @@ private sealed class OcrState {
         val rawDigits:  String,
         val confidence: OcrDateParser.Confidence,
     ) : OcrState()
-    data class Multiple(val dates: List<LocalDate>) : OcrState()
+    data class Multiple(val dates: List<OcrDateParser.ParsedDate>) : OcrState()
     object NotFound : OcrState()
 }
 
@@ -263,8 +263,8 @@ private fun OcrContent(
                 is OcrState.Multiple ->
                     MultipleCard(
                         dates           = s.dates,
-                        onSelect        = { date ->
-                            onDateDetected(OcrDateParser.toRawDigits(date))
+                        onSelect        = { parsedDate ->
+                            onDateDetected(OcrDateParser.toRawDigits(parsedDate.date))
                         },
                         onTryAgain      = tryAgain,
                         onEnterManually = onEnterManually,
@@ -309,21 +309,19 @@ private fun processOcrFrame(
 
             isScanActive.set(false)
 
-            val uniqueDates = dates.map { it.date }.distinct()
-            if (uniqueDates.size == 1) {
-                val pd   = dates.first()
-                val conf = if (dates.all { it.confidence == OcrDateParser.Confidence.HIGH })
-                    OcrDateParser.Confidence.HIGH else OcrDateParser.Confidence.MEDIUM
+            if (dates.size >= 2) {
+                // Always show selection list when 2+ dates found — never auto-accept
+                onStateUpdate(OcrState.Multiple(dates.take(5)))
+            } else {
+                val pd = dates.first()
                 onStateUpdate(
                     OcrState.Found(
                         date       = pd.date,
                         displayStr = OcrDateParser.toDisplayString(pd.date),
                         rawDigits  = OcrDateParser.toRawDigits(pd.date),
-                        confidence = conf,
+                        confidence = pd.confidence,
                     )
                 )
-            } else {
-                onStateUpdate(OcrState.Multiple(uniqueDates.take(5)))
             }
         }
         .addOnCompleteListener {
@@ -513,8 +511,8 @@ private fun ResultCard(
 
 @Composable
 private fun MultipleCard(
-    dates:           List<LocalDate>,
-    onSelect:        (LocalDate) -> Unit,
+    dates:           List<OcrDateParser.ParsedDate>,
+    onSelect:        (OcrDateParser.ParsedDate) -> Unit,
     onTryAgain:      () -> Unit,
     onEnterManually: () -> Unit,
     modifier:        Modifier = Modifier,
@@ -529,29 +527,42 @@ private fun MultipleCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                "Multiple dates found — tap to select:",
+                "Multiple dates found — tap the correct one:",
                 style     = MaterialTheme.typography.labelMedium,
                 color     = ArmadaColors.TextSecondary,
                 textAlign = TextAlign.Center,
                 modifier  = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(10.dp))
-            dates.forEachIndexed { idx, date ->
-                Text(
-                    text      = OcrDateParser.toDisplayString(date),
-                    style     = MaterialTheme.typography.bodyLarge,
-                    color     = ArmadaColors.BrandAccent,
-                    fontWeight = FontWeight.Medium,
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelect(date) }
-                        .padding(vertical = 8.dp),
-                )
-                if (idx < dates.lastIndex) {
-                    HorizontalDivider(color = ArmadaColors.Border, thickness = 0.5.dp)
+            dates.forEach { parsedDate ->
+                val label = when (parsedDate.labelType) {
+                    OcrDateParser.LabelType.EXPIRY     -> "📅 Expiry date"
+                    OcrDateParser.LabelType.PRODUCTION -> "🏭 Production date"
+                    OcrDateParser.LabelType.UNKNOWN    -> "📅 Date found"
                 }
+                val containerColor = when (parsedDate.labelType) {
+                    OcrDateParser.LabelType.EXPIRY     -> ArmadaColors.BrandAccent
+                    OcrDateParser.LabelType.PRODUCTION -> ArmadaColors.Disabled
+                    OcrDateParser.LabelType.UNKNOWN    -> ArmadaColors.BtnOcr
+                }
+                Button(
+                    onClick  = { onSelect(parsedDate) },
+                    colors   = ButtonDefaults.buttonColors(containerColor = containerColor),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = RoundedCornerShape(8.dp),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(label, fontSize = 12.sp, color = Color.White)
+                        Text(
+                            OcrDateParser.toDisplayString(parsedDate.date),
+                            fontSize   = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = Color.White,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
             }
-            Spacer(Modifier.height(10.dp))
             Row(
                 modifier              = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -8,7 +8,13 @@ object OcrDateParser {
 
     enum class Confidence { HIGH, MEDIUM }
 
-    data class ParsedDate(val date: LocalDate, val confidence: Confidence)
+    enum class LabelType { EXPIRY, PRODUCTION, UNKNOWN }
+
+    data class ParsedDate(
+        val date:      LocalDate,
+        val confidence: Confidence,
+        val labelType:  LabelType = LabelType.UNKNOWN,
+    )
 
     private val MONTHS_SHORT = mapOf(
         "JAN" to 1, "FEB" to 2, "MAR" to 3, "APR" to 4,
@@ -101,12 +107,9 @@ object OcrDateParser {
     )
 
     /**
-     * Parse all dates from [text], then classify each by nearby label keywords:
-     * - EXPIRY label within 50 chars → keep, force HIGH confidence
-     * - PRODUCTION label within 50 chars → mark as production
-     * - No label → keep as MEDIUM
-     *
-     * Return order: expiry-labeled first; if none, unlabeled; if only production, return all so user can pick.
+     * Parse all dates from [text], classify each by nearby label keywords, and return ALL of them.
+     * When 2+ dates are found, the caller always shows a selection list — the parser no longer filters.
+     * Sort order: expiry-labeled first, then unknown, then production.
      */
     fun parseAll(text: String): List<ParsedDate> {
         val upperText = text.uppercase(Locale.getDefault())
@@ -132,28 +135,35 @@ object OcrDateParser {
         if (rawMatches.isEmpty()) return emptyList()
 
         // Classify each date by label proximity in the original uppercased text
-        data class ClassifiedDate(val date: LocalDate, val confidence: Confidence, val isExpiry: Boolean, val isProd: Boolean)
-
         val classified = rawMatches.map { raw ->
             val ctxStart  = maxOf(0, raw.range.first - 50)
             val ctxEnd    = minOf(upperText.length, raw.range.last + 51)
             val ctx       = upperText.substring(ctxStart, ctxEnd)
-            val isExpiry  = EXPIRY_LABELS.any      { ctx.contains(it) }
-            val isProd    = PRODUCTION_LABELS.any  { ctx.contains(it) }
-            ClassifiedDate(raw.date, raw.confidence, isExpiry, isProd)
+            val isExpiry  = EXPIRY_LABELS.any     { ctx.contains(it) }
+            val isProd    = PRODUCTION_LABELS.any { ctx.contains(it) }
+            val labelType = when {
+                isExpiry -> LabelType.EXPIRY
+                isProd   -> LabelType.PRODUCTION
+                else     -> LabelType.UNKNOWN
+            }
+            ParsedDate(
+                date       = raw.date,
+                confidence = if (isExpiry) Confidence.HIGH else raw.confidence,
+                labelType  = labelType,
+            )
         }
 
-        val expiryDates     = classified.filter {  it.isExpiry }
-        val unlabeledDates  = classified.filter { !it.isExpiry && !it.isProd }
-        val productionDates = classified.filter { !it.isExpiry &&  it.isProd }
-
-        return when {
-            // Expiry-labeled dates found → return only those, all HIGH confidence
-            expiryDates.isNotEmpty()    -> expiryDates.map { ParsedDate(it.date, Confidence.HIGH) }
-            // No expiry label but unlabeled dates exist → return unlabeled at their original confidence
-            unlabeledDates.isNotEmpty() -> unlabeledDates.map { ParsedDate(it.date, it.confidence) }
-            // Only production-labeled dates → return them as MEDIUM so the UI asks the user to confirm
-            else                        -> productionDates.map { ParsedDate(it.date, Confidence.MEDIUM) }
+        // Multiple dates → return ALL sorted: expiry first, then unknown, then production
+        return if (classified.size > 1) {
+            classified.sortedWith(compareBy {
+                when (it.labelType) {
+                    LabelType.EXPIRY     -> 0
+                    LabelType.UNKNOWN    -> 1
+                    LabelType.PRODUCTION -> 2
+                }
+            })
+        } else {
+            classified
         }
     }
 

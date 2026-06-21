@@ -149,18 +149,14 @@ interface ExpiryEntryDao {
     // monthPrefix = "yyyy-MM"
     @Query("""
         SELECT * FROM expiry_entries
-        WHERE outletCode   = :outletCode
-          AND merchandiser = :merchandiser
-          AND salesman     = :salesman
+        WHERE outletCode = :outletCode
           AND archived = 0
           AND entryTimestamp LIKE :monthPrefix || '%'
         ORDER BY expiryDate ASC
     """)
     suspend fun getEntriesForExport(
-        outletCode: String,
-        merchandiser: String,
-        salesman: String,
-        monthPrefix: String
+        outletCode:  String,
+        monthPrefix: String,
     ): List<ExpiryEntry>
 
     // ── All-outlets text report ───────────────────────────────────────────────
